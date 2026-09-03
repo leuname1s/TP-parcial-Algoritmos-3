@@ -2,6 +2,7 @@ package funcionalidades;
 
 import datos.ModoJuego;
 import interfaces.IMenu;
+import interfaces.IPartida;
 
 import java.util.Scanner;
 
@@ -57,11 +58,7 @@ public class MenuConsola implements IMenu {
             modoSeleccionado = seleccionarModo();
             switch (modoSeleccionado) {
                 case JUGADOR_VS_MAQUINA_1:
-                    iniciarModo(modoSeleccionado);
-                    break;
                 case JUGADOR_VS_MAQUINA_2:
-                    iniciarModo(modoSeleccionado);
-                    break;
                 case MAQUINA_1_VS_MAQUINA_2:
                     iniciarModo(modoSeleccionado);
                     break;
@@ -73,9 +70,7 @@ public class MenuConsola implements IMenu {
     }
 
     private void iniciarModo(ModoJuego modo) {
-        System.out.println("\n------------------------------------------");
-        System.out.println(" Iniciando modo: " + modo.getDescripcion());
-        System.out.println(" (Lógica de partida en desarrollo...)");
-        System.out.println("------------------------------------------\n");
+        IPartida partida = new Partida(scanner);
+        partida.iniciar(modo);
     }
 }
