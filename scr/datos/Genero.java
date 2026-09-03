@@ -1,4 +1,4 @@
-package adivinanzas.dominio;
+package datos;
 
 public enum Genero {
     FEMENINO(0),
@@ -6,12 +6,11 @@ public enum Genero {
 
     private final int order;
 
-    Genero(int order){
+    Genero(int order) {
         this.order = order;
     }
 
-    public int getOrden(){
+    public int getOrden() {
         return order;
     }
-
 }

@@ -1,4 +1,4 @@
-package adivinanzas.dominio;
+package datos;
 
 public enum ColorPelo {
     COLORADO,

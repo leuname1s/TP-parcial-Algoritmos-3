@@ -1,4 +1,7 @@
-package adivinanzas.dominio;
+package funcionalidades;
+
+import datos.Personaje;
+import datos.Pregunta;
 
 public class TableroCandidatos {
 

@@ -1,6 +1,8 @@
-package adivinanzas.dominio;
+package datos;
 
-public enum Pregunta {
+import interfaces.EvaluadorPregunta;
+
+public enum Pregunta implements EvaluadorPregunta {
 
     ES_FEMENINO("Es de genero femenino") {
         @Override
@@ -45,6 +47,7 @@ public enum Pregunta {
         this.texto = texto;
     }
 
+    @Override
     public abstract boolean cumple(Personaje p);
 
     public String getTexto() {

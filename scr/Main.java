@@ -1,10 +1,8 @@
-package adivinanzas;
-
-import adivinanzas.dominio.CatalogoPersonajes;
-import adivinanzas.dominio.MazoPersonajes;
-import adivinanzas.dominio.Personaje;
-import adivinanzas.dominio.Pregunta;
-import adivinanzas.dominio.TableroCandidatos;
+import datos.Personaje;
+import datos.Pregunta;
+import funcionalidades.CatalogoPersonajes;
+import funcionalidades.MazoPersonajes;
+import funcionalidades.TableroCandidatos;
 
 public class Main {
 

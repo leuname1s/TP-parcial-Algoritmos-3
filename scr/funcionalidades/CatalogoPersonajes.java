@@ -1,10 +1,13 @@
-package adivinanzas.dominio;
+package funcionalidades;
 
-import static adivinanzas.dominio.ColorPelo.AMARILLO;
-import static adivinanzas.dominio.ColorPelo.COLORADO;
-import static adivinanzas.dominio.ColorPelo.NEGRO;
-import static adivinanzas.dominio.Genero.FEMENINO;
-import static adivinanzas.dominio.Genero.MASCULINO;
+import datos.ColorPelo;
+import datos.Genero;
+
+import static datos.ColorPelo.AMARILLO;
+import static datos.ColorPelo.COLORADO;
+import static datos.ColorPelo.NEGRO;
+import static datos.Genero.FEMENINO;
+import static datos.Genero.MASCULINO;
 
 public final class CatalogoPersonajes {
 

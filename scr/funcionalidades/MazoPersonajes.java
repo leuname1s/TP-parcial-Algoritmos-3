@@ -1,4 +1,8 @@
-package adivinanzas.dominio;
+package funcionalidades;
+
+import datos.ColorPelo;
+import datos.Genero;
+import datos.Personaje;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -32,6 +36,7 @@ public class MazoPersonajes implements Iterable<Personaje> {
         duenoDeCombinacion[codigo] = p;
         return p;
     }
+
     private static int codigoDe(Genero genero, boolean calvo,
                                 boolean lentes, ColorPelo colorPelo) {
         int codigo = genero.getOrden();
@@ -55,7 +60,6 @@ public class MazoPersonajes implements Iterable<Personaje> {
         }
         nuevo.siguiente = actual.siguiente;
         actual.siguiente = nuevo;
-
     }
 
     public Personaje buscarPorId(int id) {
@@ -93,6 +97,5 @@ public class MazoPersonajes implements Iterable<Personaje> {
                 return p;
             }
         };
-
     }
 }
