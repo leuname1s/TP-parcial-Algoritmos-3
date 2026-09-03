@@ -2,8 +2,9 @@ package funcionalidades;
 
 import datos.Personaje;
 import datos.Pregunta;
+import interfaces.ITableroCandidatos;
 
-public class TableroCandidatos {
+public class TableroCandidatos implements ITableroCandidatos {
 
     private final MazoPersonajes mazo;
     private final boolean[] vivo;
@@ -18,14 +19,17 @@ public class TableroCandidatos {
         this.cantidadViva = mazo.getCantidad();
     }
 
+    @Override
     public boolean estaVivo(int id) {
         return id >= 1 && id <= MazoPersonajes.TOTAL && vivo[id];
     }
 
+    @Override
     public int getCantidadViva() {
         return cantidadViva;
     }
 
+    @Override
     public int descartarSegun(Pregunta pregunta, boolean respuesta) {
         int descartados = 0;
         for (Personaje p : mazo) {
@@ -38,6 +42,7 @@ public class TableroCandidatos {
         return descartados;
     }
 
+    @Override
     public void descartar(int id) {
         if (estaVivo(id)) {
             vivo[id] = false;
@@ -45,6 +50,7 @@ public class TableroCandidatos {
         }
     }
 
+    @Override
     public Personaje unicoSobreviviente() {
         if (cantidadViva != 1) {
             return null;
@@ -57,6 +63,7 @@ public class TableroCandidatos {
         return null;
     }
 
+    @Override
     public int contarSiCumplen(Pregunta pregunta) {
         int cuenta = 0;
         for (Personaje p : mazo) {

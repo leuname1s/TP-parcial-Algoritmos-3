@@ -2,6 +2,7 @@ package funcionalidades;
 
 import datos.ColorPelo;
 import datos.Genero;
+import interfaces.ICatalogoPersonajes;
 
 import static datos.ColorPelo.AMARILLO;
 import static datos.ColorPelo.COLORADO;
@@ -9,9 +10,14 @@ import static datos.ColorPelo.NEGRO;
 import static datos.Genero.FEMENINO;
 import static datos.Genero.MASCULINO;
 
-public final class CatalogoPersonajes {
+public final class CatalogoPersonajes implements ICatalogoPersonajes {
 
-    private CatalogoPersonajes() {
+    public CatalogoPersonajes() {
+    }
+
+    @Override
+    public MazoPersonajes obtenerMazo() {
+        return crearMazo();
     }
 
     public static MazoPersonajes crearMazo() {

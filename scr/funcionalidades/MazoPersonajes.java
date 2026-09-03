@@ -3,11 +3,12 @@ package funcionalidades;
 import datos.ColorPelo;
 import datos.Genero;
 import datos.Personaje;
+import interfaces.IMazoPersonajes;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class MazoPersonajes implements Iterable<Personaje> {
+public class MazoPersonajes implements IMazoPersonajes {
 
     public static final int TOTAL = 23;
     private static final int COMBINACIONES = 24;
@@ -18,6 +19,7 @@ public class MazoPersonajes implements Iterable<Personaje> {
 
     private int cantidad = 0;
 
+    @Override
     public Personaje agregar(String nombre, Genero genero, boolean calvo, boolean lentes, ColorPelo colorPelo) {
         if (cantidad == TOTAL) {
             throw new IllegalStateException("El mazo ya tiene " + TOTAL + " personajes");
@@ -62,6 +64,7 @@ public class MazoPersonajes implements Iterable<Personaje> {
         actual.siguiente = nuevo;
     }
 
+    @Override
     public Personaje buscarPorId(int id) {
         if (id < 1 || id > TOTAL) {
             return null;
@@ -69,10 +72,12 @@ public class MazoPersonajes implements Iterable<Personaje> {
         return indicePorId[id];
     }
 
+    @Override
     public int getCantidad() {
         return cantidad;
     }
 
+    @Override
     public boolean estaCompleto() {
         return cantidad == TOTAL;
     }

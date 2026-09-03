@@ -1,8 +1,9 @@
 package datos;
 
+import interfaces.IPersonaje;
 import java.util.Objects;
 
-public class Personaje {
+public class Personaje implements IPersonaje {
     private final int id;
     private final String nombre;
     private final Genero genero;
@@ -19,11 +20,22 @@ public class Personaje {
         this.tienePelo = tienePelo;
     }
 
+    @Override
     public int getId() { return id; }
+
+    @Override
     public String getNombre() { return nombre; }
+
+    @Override
     public Genero getGenero() { return genero; }
+
+    @Override
     public ColorPelo getColorPelo() { return colorPelo; }
+
+    @Override
     public boolean isTieneLentes() { return tieneLentes; }
+
+    @Override
     public boolean isTienePelo() { return tienePelo; }
 
     @Override
