@@ -173,19 +173,6 @@ public class Partida implements IPartida {
                 break;
             }
 
-            // Verificación si solo queda 1 candidato en el tablero del jugador
-            Personaje unico = tableroJugador.unicoSobreviviente();
-            if (unico != null) {
-                System.out.println("\n[!] Solo queda un candidato en tu tablero: " + unico.getNombre());
-                if (unico.getId() == objetivoEnemigo.getId()) {
-                    System.out.println("¡CORRECTO! ¡Ganaste la partida por deducción!");
-                } else {
-                    System.out.println("El candidato restante no coincide con el objetivo. ¡La máquina gana!");
-                }
-                finDeJuego = true;
-                break;
-            }
-
             // Turno de la máquina correspondiente
             finDeJuego = maquinaEnemiga.ejecutarTurno(personajeJugador);
             if (finDeJuego) {
