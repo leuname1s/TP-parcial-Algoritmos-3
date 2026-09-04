@@ -19,6 +19,13 @@ public class TableroCandidatos implements ITableroCandidatos {
         this.cantidadViva = mazo.getCantidad();
     }
 
+    // Constructor de copia para heredar el estado de un tablero preexistente
+    public TableroCandidatos(TableroCandidatos original) {
+        this.mazo = original.mazo;
+        this.vivo = original.vivo.clone();
+        this.cantidadViva = original.cantidadViva;
+    }
+
     @Override
     public boolean estaVivo(int id) {
         return id >= 1 && id <= MazoPersonajes.TOTAL && vivo[id];
