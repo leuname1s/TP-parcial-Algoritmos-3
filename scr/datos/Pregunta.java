@@ -4,13 +4,19 @@ import interfaces.EvaluadorPregunta;
 
 public enum Pregunta implements EvaluadorPregunta {
 
-    ES_FEMENINO("Es de genero femenino") {
+    ES_FEMENINO("Es mujer") {
         @Override
         public boolean cumple(Personaje p) {
             return p.getGenero() == Genero.FEMENINO;
         }
     },
-    ES_CALVO("Es calvo") {
+    ES_MASCULINO("Es hombre") {
+        @Override
+        public boolean cumple(Personaje p) {
+            return p.getGenero() == Genero.MASCULINO;
+        }
+    },
+    ES_CALVO("Es pelado") {
         @Override
         public boolean cumple(Personaje p) {
             return p.isTienePelo();
