@@ -21,6 +21,12 @@ public class Maquina1 implements IMaquina {
         this.random = new Random();
     }
 
+    public Maquina1(MazoPersonajes mazo, TableroCandidatos tableroHeredado) {
+        this.mazo = mazo;
+        this.tablero = new TableroCandidatos(tableroHeredado);
+        this.random = new Random();
+    }
+
     @Override
     public String getNombre() {
         return nombre;

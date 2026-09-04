@@ -20,7 +20,6 @@ public class Maquina2 implements IMaquina {
     private boolean colorEncontrado = false;
     private boolean preguntoLentes = false;
 
-    // Solo se necesita preguntar por Amarillo y Negro. Si ambas son NO, por descarte el pelo es Colorado.
     private static final Pregunta[] PREGUNTAS_PELO = {
             Pregunta.PELO_AMARILLO,
             Pregunta.PELO_NEGRO
@@ -29,6 +28,12 @@ public class Maquina2 implements IMaquina {
     public Maquina2(MazoPersonajes mazo) {
         this.mazo = mazo;
         this.tablero = new TableroCandidatos(mazo);
+        this.random = new Random();
+    }
+
+    public Maquina2(MazoPersonajes mazo, TableroCandidatos tableroHeredado) {
+        this.mazo = mazo;
+        this.tablero = new TableroCandidatos(tableroHeredado);
         this.random = new Random();
     }
 

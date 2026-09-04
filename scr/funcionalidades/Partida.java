@@ -157,10 +157,83 @@ public class Partida implements IPartida {
             return;
         }
 
+        // FASE 1: Enfrentamiento inicial
+        IMaquina maquinaEnemigaInicial = (modoActual == ModoJuego.JUGADOR_VS_MAQUINA_1) ? maquina1 : maquina2;
+        Personaje objetivoEnemigoInicial = (modoActual == ModoJuego.JUGADOR_VS_MAQUINA_1) ? objetivoMaquina1 : objetivoMaquina2;
+
+        boolean ganoJugadorFase1 = ejecutarBuclePartida(maquinaEnemigaInicial, objetivoEnemigoInicial);
+
+        // Si el jugador gana la Fase 1, se le ofrece desafiar a la otra máquina
+        if (ganoJugadorFase1) {
+            boolean quiereContinuar = ofrecerDesafioSegundaMaquina(maquinaEnemigaInicial);
+            if (quiereContinuar) {
+                iniciarYJugarFase2(maquinaEnemigaInicial);
+            }
+        }
+    }
+
+    private boolean ofrecerDesafioSegundaMaquina(IMaquina maquinaDerrotada) {
+        String nombreSiguiente = maquinaDerrotada.getNombre().equals("Máquina 1") ? "Máquina 2" : "Máquina 1";
+
+        System.out.println("\n==========================================");
+        System.out.println("   ¡VICTORIA CONTRA " + maquinaDerrotada.getNombre().toUpperCase() + "!   ");
+        System.out.println("==========================================");
+        System.out.println("¿Deseas continuar en esta misma partida desafiando a " + nombreSiguiente + "?");
+        System.out.println("  1. Sí, pelear contra " + nombreSiguiente);
+        System.out.println("  2. No, finalizar la partida");
+        System.out.print("Ingrese una opción (1 o 2): ");
+
+        while (true) {
+            String opcion = scanner.nextLine().trim();
+            if ("1".equals(opcion)) {
+                return true;
+            } else if ("2".equals(opcion)) {
+                System.out.println("\nHas decidido finalizar la partida. ¡Gran trabajo!");
+                return false;
+            } else {
+                System.out.print("[!] Opción inválida. Ingrese 1 o 2: ");
+            }
+        }
+    }
+
+    private void iniciarYJugarFase2(IMaquina maquinaPrimera) {
+        TableroCandidatos tableroHeredado = (TableroCandidatos) maquinaPrimera.getTablero();
+        IMaquina segundaMaquina;
+        Personaje nuevoObjetivo;
+
+        if (maquinaPrimera.getNombre().equals("Máquina 1")) {
+            this.maquina2 = new Maquina2(mazo, tableroHeredado);
+            this.objetivoMaquina2 = mazo.buscarPorId(random.nextInt(MazoPersonajes.TOTAL) + 1);
+            segundaMaquina = this.maquina2;
+            nuevoObjetivo = this.objetivoMaquina2;
+        } else {
+            this.maquina1 = new Maquina1(mazo, tableroHeredado);
+            this.objetivoMaquina1 = mazo.buscarPorId(random.nextInt(MazoPersonajes.TOTAL) + 1);
+            segundaMaquina = this.maquina1;
+            nuevoObjetivo = this.objetivoMaquina1;
+        }
+
+        // Resetear el tablero del jugador para adivinar al nuevo personaje de la segunda máquina
+        this.tableroJugador = new TableroCandidatos(mazo);
+
+        System.out.println("\n==========================================");
+        System.out.println("       INICIANDO FASE 2 DE LA PARTIDA     ");
+        System.out.println("==========================================");
+        System.out.println("- Enfrentas a: " + segundaMaquina.getNombre());
+        System.out.println("- Tu personaje secreto se mantiene: " + personajeJugador.getNombre() + " (ID: " + personajeJugador.getId() + ")");
+        System.out.println("- Tu tablero de candidatos ha sido RESETEADO (23 vivos).");
+        System.out.println("- " + segundaMaquina.getNombre() + " HEREDÓ el tablero de " + maquinaPrimera.getNombre()
+                + " (posee " + segundaMaquina.getTablero().getCantidadViva() + " candidatos vivos).");
+        System.out.println("- " + segundaMaquina.getNombre() + " ha recibido un nuevo personaje objetivo secreto.");
+        System.out.println("==========================================\n");
+
+        ejecutarBuclePartida(segundaMaquina, nuevoObjetivo);
+    }
+
+    private boolean ejecutarBuclePartida(IMaquina maquinaEnemiga, Personaje objetivoEnemigo) {
         boolean finDeJuego = false;
+        boolean ganoJugador = false;
         int ronda = 1;
-        Personaje objetivoEnemigo = (modoActual == ModoJuego.JUGADOR_VS_MAQUINA_1) ? objetivoMaquina1 : objetivoMaquina2;
-        IMaquina maquinaEnemiga = (modoActual == ModoJuego.JUGADOR_VS_MAQUINA_1) ? maquina1 : maquina2;
 
         while (!finDeJuego) {
             System.out.println("\n==========================================");
@@ -168,19 +241,25 @@ public class Partida implements IPartida {
             System.out.println("==========================================");
 
             // Turno del jugador
-            finDeJuego = turnoJugador(objetivoEnemigo);
-            if (finDeJuego) {
+            boolean victoriaJugador = turnoJugador(objetivoEnemigo);
+            if (victoriaJugador) {
+                ganoJugador = true;
+                finDeJuego = true;
                 break;
             }
 
-            // Turno de la máquina correspondiente
-            finDeJuego = maquinaEnemiga.ejecutarTurno(personajeJugador);
-            if (finDeJuego) {
+            // Turno de la máquina enemiga
+            boolean victoriaMaquina = maquinaEnemiga.ejecutarTurno(personajeJugador);
+            if (victoriaMaquina) {
+                ganoJugador = false;
+                finDeJuego = true;
                 break;
             }
 
             ronda++;
         }
+
+        return ganoJugador;
     }
 
     private boolean turnoJugador(Personaje objetivoEnemigo) {
