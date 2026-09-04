@@ -3,6 +3,7 @@ package funcionalidades;
 import datos.ModoJuego;
 import datos.Personaje;
 import datos.Pregunta;
+import interfaces.IMaquina;
 import interfaces.IPartida;
 import interfaces.ITableroCandidatos;
 
@@ -21,8 +22,9 @@ public class Partida implements IPartida {
     private Personaje objetivoMaquina2;
 
     private TableroCandidatos tableroJugador;
-    private TableroCandidatos tableroMaquina1;
-    private TableroCandidatos tableroMaquina2;
+
+    private IMaquina maquina1;
+    private IMaquina maquina2;
 
     public Partida() {
         this.scanner = new Scanner(System.in);
@@ -45,8 +47,10 @@ public class Partida implements IPartida {
         // Cargar mazo completo
         this.mazo = CatalogoPersonajes.crearMazo();
 
-        if (modo == ModoJuego.JUGADOR_VS_MAQUINA_1 || modo == ModoJuego.JUGADOR_VS_MAQUINA_2) {
-            configurarModoJugador(modo);
+        if (modo == ModoJuego.JUGADOR_VS_MAQUINA_1) {
+            configurarJugadorVsMaquina1();
+        } else if (modo == ModoJuego.JUGADOR_VS_MAQUINA_2) {
+            configurarJugadorVsMaquina2();
         } else if (modo == ModoJuego.MAQUINA_1_VS_MAQUINA_2) {
             configurarModoMaquinaVsMaquina();
         }
@@ -54,15 +58,33 @@ public class Partida implements IPartida {
         resumenPartidaInicializada(modo);
     }
 
-    private void configurarModoJugador(ModoJuego modo) {
-        // 1. Selección de personaje del jugador
+    private void configurarJugadorVsMaquina1() {
         this.personajeJugador = seleccionarPersonajeJugador();
         this.tableroJugador = new TableroCandidatos(mazo);
 
-        // 2. Asignación aleatoria del objetivo secreto de la máquina
         int idObjetivoMaq = random.nextInt(MazoPersonajes.TOTAL) + 1;
         this.objetivoMaquina1 = mazo.buscarPorId(idObjetivoMaq);
-        this.tableroMaquina1 = new TableroCandidatos(mazo);
+        this.maquina1 = new Maquina1(mazo);
+    }
+
+    private void configurarJugadorVsMaquina2() {
+        this.personajeJugador = seleccionarPersonajeJugador();
+        this.tableroJugador = new TableroCandidatos(mazo);
+
+        int idObjetivoMaq = random.nextInt(MazoPersonajes.TOTAL) + 1;
+        this.objetivoMaquina2 = mazo.buscarPorId(idObjetivoMaq);
+        this.maquina2 = new Maquina2(mazo);
+    }
+
+    private void configurarModoMaquinaVsMaquina() {
+        int id1 = random.nextInt(MazoPersonajes.TOTAL) + 1;
+        int id2 = random.nextInt(MazoPersonajes.TOTAL) + 1;
+
+        this.objetivoMaquina1 = mazo.buscarPorId(id1);
+        this.objetivoMaquina2 = mazo.buscarPorId(id2);
+
+        this.maquina1 = new Maquina1(mazo);
+        this.maquina2 = new Maquina2(mazo);
     }
 
     private Personaje seleccionarPersonajeJugador() {
@@ -111,33 +133,19 @@ public class Partida implements IPartida {
         }
     }
 
-    private void configurarModoMaquinaVsMaquina() {
-        // Asignación de objetivos secretos aleatorios para ambas máquinas
-        int id1 = random.nextInt(MazoPersonajes.TOTAL) + 1;
-        int id2 = random.nextInt(MazoPersonajes.TOTAL) + 1;
-
-        this.objetivoMaquina1 = mazo.buscarPorId(id1);
-        this.objetivoMaquina2 = mazo.buscarPorId(id2);
-
-        this.tableroMaquina1 = new TableroCandidatos(mazo);
-        this.tableroMaquina2 = new TableroCandidatos(mazo);
-    }
-
     private void resumenPartidaInicializada(ModoJuego modo) {
         System.out.println("\n------------------------------------------");
         System.out.println("   PARTIDA INICIALIZADA CORRECTAMENTE     ");
         System.out.println("------------------------------------------");
         if (personajeJugador != null) {
             System.out.println("Tu personaje secreto: " + personajeJugador.getNombre() + " (ID: " + personajeJugador.getId() + ")");
-            System.out.println("Tablero del Jugador: " + tableroJugador.getCantidadViva() + " candidatos posibles.");
+            System.out.println("Tablero del Jugador: " + tableroJugador.getCantidadViva() + " candidatos vivos.");
         }
         if (objetivoMaquina1 != null) {
             System.out.println("Objetivo secreto de Máquina 1 (a adivinar): " + objetivoMaquina1.getNombre() + " (ID: " + objetivoMaquina1.getId() + ")");
-            System.out.println("Tablero de Máquina 1: " + tableroMaquina1.getCantidadViva() + " candidatos posibles.");
         }
         if (objetivoMaquina2 != null) {
             System.out.println("Objetivo secreto de Máquina 2 (a adivinar): " + objetivoMaquina2.getNombre() + " (ID: " + objetivoMaquina2.getId() + ")");
-            System.out.println("Tablero de Máquina 2: " + tableroMaquina2.getCantidadViva() + " candidatos posibles.");
         }
         System.out.println("------------------------------------------\n");
     }
@@ -151,6 +159,8 @@ public class Partida implements IPartida {
 
         boolean finDeJuego = false;
         int ronda = 1;
+        Personaje objetivoEnemigo = (modoActual == ModoJuego.JUGADOR_VS_MAQUINA_1) ? objetivoMaquina1 : objetivoMaquina2;
+        IMaquina maquinaEnemiga = (modoActual == ModoJuego.JUGADOR_VS_MAQUINA_1) ? maquina1 : maquina2;
 
         while (!finDeJuego) {
             System.out.println("\n==========================================");
@@ -158,7 +168,7 @@ public class Partida implements IPartida {
             System.out.println("==========================================");
 
             // Turno del jugador
-            finDeJuego = turnoJugador();
+            finDeJuego = turnoJugador(objetivoEnemigo);
             if (finDeJuego) {
                 break;
             }
@@ -167,7 +177,7 @@ public class Partida implements IPartida {
             Personaje unico = tableroJugador.unicoSobreviviente();
             if (unico != null) {
                 System.out.println("\n[!] Solo queda un candidato en tu tablero: " + unico.getNombre());
-                if (unico.getId() == objetivoMaquina1.getId()) {
+                if (unico.getId() == objetivoEnemigo.getId()) {
                     System.out.println("¡CORRECTO! ¡Ganaste la partida por deducción!");
                 } else {
                     System.out.println("El candidato restante no coincide con el objetivo. ¡La máquina gana!");
@@ -176,38 +186,40 @@ public class Partida implements IPartida {
                 break;
             }
 
-            // Turno de la máquina (saltea por ahora)
-            System.out.println("\n--- TURNO DE LA MÁQUINA ---");
-            System.out.println("[Máquina 1] Saltea su turno.");
+            // Turno de la máquina correspondiente
+            finDeJuego = maquinaEnemiga.ejecutarTurno(personajeJugador);
+            if (finDeJuego) {
+                break;
+            }
 
             ronda++;
         }
     }
 
-    private boolean turnoJugador() {
+    private boolean turnoJugador(Personaje objetivoEnemigo) {
         System.out.println("\n------------------------------------------");
         System.out.println("            TURNO DEL JUGADOR             ");
         System.out.println("------------------------------------------");
-        System.out.println("Candidatos posibles restantes en tu tablero: " + tableroJugador.getCantidadViva());
+        System.out.println("Candidatos vivos restantes en tu tablero: " + tableroJugador.getCantidadViva());
         System.out.println("  1. Hacer una pregunta");
         System.out.println("  2. Arriesgar personaje por ID");
-        System.out.println("  3. Ver candidatos posibles");
+        System.out.println("  3. Ver candidatos vivos");
         System.out.print("Seleccione una opción: ");
 
         while (true) {
             String opcion = scanner.nextLine().trim();
             switch (opcion) {
                 case "1":
-                    hacerPreguntaJugador();
-                    return false; // Turno termina, el juego continúa
+                    hacerPreguntaJugador(objetivoEnemigo);
+                    return false;
                 case "2":
-                    return arriesgarJugador(); // Retorna true si gana el jugador
+                    return arriesgarJugador(objetivoEnemigo);
                 case "3":
                     mostrarCandidatosVivos();
                     System.out.println("\n¿Qué deseas hacer ahora?");
                     System.out.println("  1. Hacer una pregunta");
                     System.out.println("  2. Arriesgar personaje por ID");
-                    System.out.println("  3. Ver candidatos posibles");
+                    System.out.println("  3. Ver candidatos vivos");
                     System.out.print("Seleccione una opción: ");
                     break;
                 default:
@@ -217,7 +229,7 @@ public class Partida implements IPartida {
         }
     }
 
-    private void hacerPreguntaJugador() {
+    private void hacerPreguntaJugador(Personaje objetivoEnemigo) {
         System.out.println("\n--- ELIGE UNA PREGUNTA ---");
         Pregunta[] preguntas = Pregunta.values();
         for (int i = 0; i < preguntas.length; i++) {
@@ -241,16 +253,16 @@ public class Partida implements IPartida {
         }
 
         Pregunta q = preguntas[indexPregunta];
-        boolean respuesta = q.cumple(objetivoMaquina1);
+        boolean respuesta = q.cumple(objetivoEnemigo);
         System.out.println("\n -> Pregunta realizada: \"" + q + "\"");
         System.out.println(" -> Respuesta de la máquina: " + (respuesta ? "¡SÍ!" : "NO"));
 
         int descartados = tableroJugador.descartarSegun(q, respuesta);
         System.out.println(" -> Se descartaron " + descartados + " candidatos de tu tablero.");
-        System.out.println(" -> Candidatos posibles restantes: " + tableroJugador.getCantidadViva());
+        System.out.println(" -> Candidatos vivos restantes: " + tableroJugador.getCantidadViva());
     }
 
-    private boolean arriesgarJugador() {
+    private boolean arriesgarJugador(Personaje objetivoEnemigo) {
         System.out.print("\nIngrese el ID del personaje por el cual desea arriesgar (1 a " + MazoPersonajes.TOTAL + "): ");
         int idArriesgado = -1;
         while (idArriesgado == -1) {
@@ -268,7 +280,7 @@ public class Partida implements IPartida {
         }
 
         Personaje pArriesgado = mazo.buscarPorId(idArriesgado);
-        if (idArriesgado == objetivoMaquina1.getId()) {
+        if (idArriesgado == objetivoEnemigo.getId()) {
             System.out.println("\n**************************************************");
             System.out.println("   ¡CORRECTO! ¡HAS ADIVINADO EL PERSONAJE!        ");
             System.out.println("   El personaje secreto era: " + pArriesgado.getNombre() + " (ID: " + pArriesgado.getId() + ")");
@@ -285,7 +297,7 @@ public class Partida implements IPartida {
     }
 
     private void mostrarCandidatosVivos() {
-        System.out.println("\n--- CANDIDATOS POSIBLES EN TU TABLERO (" + tableroJugador.getCantidadViva() + ") ---");
+        System.out.println("\n--- CANDIDATOS VIVOS EN TU TABLERO (" + tableroJugador.getCantidadViva() + ") ---");
         for (Personaje p : mazo) {
             if (tableroJugador.estaVivo(p.getId())) {
                 System.out.println(p);
@@ -295,10 +307,29 @@ public class Partida implements IPartida {
     }
 
     private void jugarMaquinaVsMaquina() {
-        System.out.println("\n--- MODO MÁQUINA VS MÁQUINA ---");
-        System.out.println("[Máquina 1] Saltea su turno.");
-        System.out.println("[Máquina 2] Saltea su turno.");
-        System.out.println("(Lógica de máquinas en desarrollo...)");
+        System.out.println("\n--- INICIANDO MODO MÁQUINA 1 VS MÁQUINA 2 ---");
+        boolean finDeJuego = false;
+        int ronda = 1;
+
+        while (!finDeJuego) {
+            System.out.println("\n==========================================");
+            System.out.println("               RONDA " + ronda);
+            System.out.println("==========================================");
+
+            // Turno de Máquina 1 buscando a objetivoMaquina2
+            finDeJuego = maquina1.ejecutarTurno(objetivoMaquina2);
+            if (finDeJuego) {
+                break;
+            }
+
+            // Turno de Máquina 2 buscando a objetivoMaquina1
+            finDeJuego = maquina2.ejecutarTurno(objetivoMaquina1);
+            if (finDeJuego) {
+                break;
+            }
+
+            ronda++;
+        }
     }
 
     @Override
@@ -323,11 +354,11 @@ public class Partida implements IPartida {
 
     @Override
     public ITableroCandidatos getTableroMaquina1() {
-        return tableroMaquina1;
+        return (maquina1 != null) ? maquina1.getTablero() : null;
     }
 
     @Override
     public ITableroCandidatos getTableroMaquina2() {
-        return tableroMaquina2;
+        return (maquina2 != null) ? maquina2.getTablero() : null;
     }
 }
