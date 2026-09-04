@@ -129,15 +129,15 @@ public class Partida implements IPartida {
         System.out.println("------------------------------------------");
         if (personajeJugador != null) {
             System.out.println("Tu personaje secreto: " + personajeJugador.getNombre() + " (ID: " + personajeJugador.getId() + ")");
-            System.out.println("Tablero del Jugador: " + tableroJugador.getCantidadViva() + " candidatos vivos.");
+            System.out.println("Tablero del Jugador: " + tableroJugador.getCantidadViva() + " candidatos posibles.");
         }
         if (objetivoMaquina1 != null) {
             System.out.println("Objetivo secreto de Máquina 1 (a adivinar): " + objetivoMaquina1.getNombre() + " (ID: " + objetivoMaquina1.getId() + ")");
-            System.out.println("Tablero de Máquina 1: " + tableroMaquina1.getCantidadViva() + " candidatos vivos.");
+            System.out.println("Tablero de Máquina 1: " + tableroMaquina1.getCantidadViva() + " candidatos posibles.");
         }
         if (objetivoMaquina2 != null) {
             System.out.println("Objetivo secreto de Máquina 2 (a adivinar): " + objetivoMaquina2.getNombre() + " (ID: " + objetivoMaquina2.getId() + ")");
-            System.out.println("Tablero de Máquina 2: " + tableroMaquina2.getCantidadViva() + " candidatos vivos.");
+            System.out.println("Tablero de Máquina 2: " + tableroMaquina2.getCantidadViva() + " candidatos posibles.");
         }
         System.out.println("------------------------------------------\n");
     }
@@ -188,10 +188,10 @@ public class Partida implements IPartida {
         System.out.println("\n------------------------------------------");
         System.out.println("            TURNO DEL JUGADOR             ");
         System.out.println("------------------------------------------");
-        System.out.println("Candidatos vivos restantes en tu tablero: " + tableroJugador.getCantidadViva());
+        System.out.println("Candidatos posibles restantes en tu tablero: " + tableroJugador.getCantidadViva());
         System.out.println("  1. Hacer una pregunta");
         System.out.println("  2. Arriesgar personaje por ID");
-        System.out.println("  3. Ver candidatos vivos");
+        System.out.println("  3. Ver candidatos posibles");
         System.out.print("Seleccione una opción: ");
 
         while (true) {
@@ -207,7 +207,7 @@ public class Partida implements IPartida {
                     System.out.println("\n¿Qué deseas hacer ahora?");
                     System.out.println("  1. Hacer una pregunta");
                     System.out.println("  2. Arriesgar personaje por ID");
-                    System.out.println("  3. Ver candidatos vivos");
+                    System.out.println("  3. Ver candidatos posibles");
                     System.out.print("Seleccione una opción: ");
                     break;
                 default:
@@ -247,7 +247,7 @@ public class Partida implements IPartida {
 
         int descartados = tableroJugador.descartarSegun(q, respuesta);
         System.out.println(" -> Se descartaron " + descartados + " candidatos de tu tablero.");
-        System.out.println(" -> Candidatos vivos restantes: " + tableroJugador.getCantidadViva());
+        System.out.println(" -> Candidatos posibles restantes: " + tableroJugador.getCantidadViva());
     }
 
     private boolean arriesgarJugador() {
@@ -285,7 +285,7 @@ public class Partida implements IPartida {
     }
 
     private void mostrarCandidatosVivos() {
-        System.out.println("\n--- CANDIDATOS VIVOS EN TU TABLERO (" + tableroJugador.getCantidadViva() + ") ---");
+        System.out.println("\n--- CANDIDATOS POSIBLES EN TU TABLERO (" + tableroJugador.getCantidadViva() + ") ---");
         for (Personaje p : mazo) {
             if (tableroJugador.estaVivo(p.getId())) {
                 System.out.println(p);
