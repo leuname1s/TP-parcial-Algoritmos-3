@@ -2,6 +2,7 @@ package funcionalidades;
 
 import datos.ModoJuego;
 import datos.Personaje;
+import datos.Pregunta;
 import interfaces.IPartida;
 import interfaces.ITableroCandidatos;
 
@@ -13,6 +14,7 @@ public class Partida implements IPartida {
     private final Scanner scanner;
     private final Random random;
     private MazoPersonajes mazo;
+    private ModoJuego modoActual;
 
     private Personaje personajeJugador;
     private Personaje objetivoMaquina1;
@@ -34,6 +36,7 @@ public class Partida implements IPartida {
 
     @Override
     public void iniciar(ModoJuego modo) {
+        this.modoActual = modo;
         System.out.println("\n==========================================");
         System.out.println("       CONFIGURACIÓN INICIAL DE PARTIDA   ");
         System.out.println("==========================================");
@@ -137,6 +140,165 @@ public class Partida implements IPartida {
             System.out.println("Tablero de Máquina 2: " + tableroMaquina2.getCantidadViva() + " candidatos vivos.");
         }
         System.out.println("------------------------------------------\n");
+    }
+
+    @Override
+    public void jugar() {
+        if (modoActual == ModoJuego.MAQUINA_1_VS_MAQUINA_2) {
+            jugarMaquinaVsMaquina();
+            return;
+        }
+
+        boolean finDeJuego = false;
+        int ronda = 1;
+
+        while (!finDeJuego) {
+            System.out.println("\n==========================================");
+            System.out.println("               RONDA " + ronda);
+            System.out.println("==========================================");
+
+            // Turno del jugador
+            finDeJuego = turnoJugador();
+            if (finDeJuego) {
+                break;
+            }
+
+            // Verificación si solo queda 1 candidato en el tablero del jugador
+            Personaje unico = tableroJugador.unicoSobreviviente();
+            if (unico != null) {
+                System.out.println("\n[!] Solo queda un candidato en tu tablero: " + unico.getNombre());
+                if (unico.getId() == objetivoMaquina1.getId()) {
+                    System.out.println("¡CORRECTO! ¡Ganaste la partida por deducción!");
+                } else {
+                    System.out.println("El candidato restante no coincide con el objetivo. ¡La máquina gana!");
+                }
+                finDeJuego = true;
+                break;
+            }
+
+            // Turno de la máquina (saltea por ahora)
+            System.out.println("\n--- TURNO DE LA MÁQUINA ---");
+            System.out.println("[Máquina 1] Saltea su turno.");
+
+            ronda++;
+        }
+    }
+
+    private boolean turnoJugador() {
+        System.out.println("\n------------------------------------------");
+        System.out.println("            TURNO DEL JUGADOR             ");
+        System.out.println("------------------------------------------");
+        System.out.println("Candidatos vivos restantes en tu tablero: " + tableroJugador.getCantidadViva());
+        System.out.println("  1. Hacer una pregunta");
+        System.out.println("  2. Arriesgar personaje por ID");
+        System.out.println("  3. Ver candidatos vivos");
+        System.out.print("Seleccione una opción: ");
+
+        while (true) {
+            String opcion = scanner.nextLine().trim();
+            switch (opcion) {
+                case "1":
+                    hacerPreguntaJugador();
+                    return false; // Turno termina, el juego continúa
+                case "2":
+                    return arriesgarJugador(); // Retorna true si gana el jugador
+                case "3":
+                    mostrarCandidatosVivos();
+                    System.out.println("\n¿Qué deseas hacer ahora?");
+                    System.out.println("  1. Hacer una pregunta");
+                    System.out.println("  2. Arriesgar personaje por ID");
+                    System.out.println("  3. Ver candidatos vivos");
+                    System.out.print("Seleccione una opción: ");
+                    break;
+                default:
+                    System.out.print("[!] Opción inválida. Ingrese 1, 2 o 3: ");
+                    break;
+            }
+        }
+    }
+
+    private void hacerPreguntaJugador() {
+        System.out.println("\n--- ELIGE UNA PREGUNTA ---");
+        Pregunta[] preguntas = Pregunta.values();
+        for (int i = 0; i < preguntas.length; i++) {
+            System.out.printf("  %d. %s%n", i + 1, preguntas[i]);
+        }
+        System.out.print("Ingrese el número de la pregunta (1 a " + preguntas.length + "): ");
+
+        int indexPregunta = -1;
+        while (indexPregunta == -1) {
+            String entrada = scanner.nextLine().trim();
+            try {
+                int num = Integer.parseInt(entrada);
+                if (num >= 1 && num <= preguntas.length) {
+                    indexPregunta = num - 1;
+                } else {
+                    System.out.print("[!] Número fuera de rango. Ingrese un número entre 1 y " + preguntas.length + ": ");
+                }
+            } catch (NumberFormatException e) {
+                System.out.print("[!] Entrada no válida. Ingrese un número entre 1 y " + preguntas.length + ": ");
+            }
+        }
+
+        Pregunta q = preguntas[indexPregunta];
+        boolean respuesta = q.cumple(objetivoMaquina1);
+        System.out.println("\n -> Pregunta realizada: \"" + q + "\"");
+        System.out.println(" -> Respuesta de la máquina: " + (respuesta ? "¡SÍ!" : "NO"));
+
+        int descartados = tableroJugador.descartarSegun(q, respuesta);
+        System.out.println(" -> Se descartaron " + descartados + " candidatos de tu tablero.");
+        System.out.println(" -> Candidatos vivos restantes: " + tableroJugador.getCantidadViva());
+    }
+
+    private boolean arriesgarJugador() {
+        System.out.print("\nIngrese el ID del personaje por el cual desea arriesgar (1 a " + MazoPersonajes.TOTAL + "): ");
+        int idArriesgado = -1;
+        while (idArriesgado == -1) {
+            String entrada = scanner.nextLine().trim();
+            try {
+                int id = Integer.parseInt(entrada);
+                if (id >= 1 && id <= MazoPersonajes.TOTAL) {
+                    idArriesgado = id;
+                } else {
+                    System.out.print("[!] ID fuera de rango. Ingrese un número entre 1 y " + MazoPersonajes.TOTAL + ": ");
+                }
+            } catch (NumberFormatException e) {
+                System.out.print("[!] Entrada no válida. Ingrese un número entre 1 y " + MazoPersonajes.TOTAL + ": ");
+            }
+        }
+
+        Personaje pArriesgado = mazo.buscarPorId(idArriesgado);
+        if (idArriesgado == objetivoMaquina1.getId()) {
+            System.out.println("\n**************************************************");
+            System.out.println("   ¡CORRECTO! ¡HAS ADIVINADO EL PERSONAJE!        ");
+            System.out.println("   El personaje secreto era: " + pArriesgado.getNombre() + " (ID: " + pArriesgado.getId() + ")");
+            System.out.println("**************************************************\n");
+            return true;
+        } else {
+            System.out.println("\n[X] INCORRECTO. " + pArriesgado.getNombre() + " NO es el personaje secreto.");
+            if (tableroJugador.estaVivo(idArriesgado)) {
+                tableroJugador.descartar(idArriesgado);
+                System.out.println("Se descartó a " + pArriesgado.getNombre() + " de tu tablero. Quedan " + tableroJugador.getCantidadViva() + " candidatos.");
+            }
+            return false;
+        }
+    }
+
+    private void mostrarCandidatosVivos() {
+        System.out.println("\n--- CANDIDATOS VIVOS EN TU TABLERO (" + tableroJugador.getCantidadViva() + ") ---");
+        for (Personaje p : mazo) {
+            if (tableroJugador.estaVivo(p.getId())) {
+                System.out.println(p);
+            }
+        }
+        System.out.println("--------------------------------------------------");
+    }
+
+    private void jugarMaquinaVsMaquina() {
+        System.out.println("\n--- MODO MÁQUINA VS MÁQUINA ---");
+        System.out.println("[Máquina 1] Saltea su turno.");
+        System.out.println("[Máquina 2] Saltea su turno.");
+        System.out.println("(Lógica de máquinas en desarrollo...)");
     }
 
     @Override

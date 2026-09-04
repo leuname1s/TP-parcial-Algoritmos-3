@@ -72,5 +72,6 @@ public class MenuConsola implements IMenu {
     private void iniciarModo(ModoJuego modo) {
         IPartida partida = new Partida(scanner);
         partida.iniciar(modo);
+        partida.jugar();
     }
 }

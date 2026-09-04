@@ -5,6 +5,7 @@ import datos.Personaje;
 
 public interface IPartida {
     void iniciar(ModoJuego modo);
+    void jugar();
     Personaje getPersonajeJugador();
     Personaje getObjetivoMaquina1();
     Personaje getObjetivoMaquina2();
