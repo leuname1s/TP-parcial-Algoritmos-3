@@ -16,11 +16,13 @@ public class Maquina2 implements IMaquina {
     private final MazoPersonajes mazo;
     private final Random random;
 
-    private int pasoPregunta = 0;
-    private static final Pregunta[] SECUENCIA_PREGUNTAS = {
-            Pregunta.ES_FEMENINO,
-            Pregunta.USA_LENTES,
-            Pregunta.ES_CALVO,
+    private int indicePelo = 0;
+    private boolean colorEncontrado = false;
+    private boolean preguntoLentes = false;
+
+    // Solo se necesita preguntar por Amarillo y Negro. Si ambas son NO, por descarte el pelo es Colorado.
+    private static final Pregunta[] PREGUNTAS_PELO = {
+            Pregunta.PELO_AMARILLO,
             Pregunta.PELO_NEGRO
     };
 
@@ -44,33 +46,46 @@ public class Maquina2 implements IMaquina {
     public boolean ejecutarTurno(Personaje objetivoEnemigo) {
         System.out.println("\n--- TURNO DE " + nombre.toUpperCase() + " ---");
 
-        if (pasoPregunta < SECUENCIA_PREGUNTAS.length) {
-            Pregunta preguntaActual = SECUENCIA_PREGUNTAS[pasoPregunta];
-            pasoPregunta++;
+        // FASE 1: Averiguar color de pelo (preguntando únicamente por amarillo y luego negro)
+        if (!colorEncontrado && indicePelo < PREGUNTAS_PELO.length) {
+            Pregunta preguntaPelo = PREGUNTAS_PELO[indicePelo++];
+            boolean respuesta = preguntaPelo.cumple(objetivoEnemigo);
 
-            boolean respuesta = preguntaActual.cumple(objetivoEnemigo);
-            System.out.println("[" + nombre + "] Pregunta: \"" + preguntaActual + "\"");
+            System.out.println("[" + nombre + "] Pregunta: \"" + preguntaPelo + "\"");
             System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
 
-            int descartados = tablero.descartarSegun(preguntaActual, respuesta);
+            int descartados = tablero.descartarSegun(preguntaPelo, respuesta);
             System.out.println("[" + nombre + "] Descartó " + descartados
                     + " candidatos. Le quedan " + tablero.getCantidadViva() + " candidatos.");
 
-            Personaje unico = tablero.unicoSobreviviente();
-            if (unico != null) {
-                System.out.println("[" + nombre + "] Solo le queda 1 candidato en su tablero: " + unico.getNombre());
-                if (unico.getId() == objetivoEnemigo.getId()) {
-                    System.out.println("\n**************************************************");
-                    System.out.println("   ¡" + nombre.toUpperCase() + " HA ADIVINADO EL PERSONAJE!   ");
-                    System.out.println("   El personaje era: " + unico.getNombre() + " (ID: " + unico.getId() + ")");
-                    System.out.println("**************************************************\n");
-                    return true;
-                }
+            if (respuesta) {
+                colorEncontrado = true; // Si es SÍ, se descubrió el color y salta el resto de preguntas de pelo
+            } else if (indicePelo == PREGUNTAS_PELO.length) {
+                // Al recibir el 2do NO, deduce por descarte que el pelo debe ser colorado y omite la pregunta
+                System.out.println("[" + nombre + "] (Deducción lógica: Al recibir 2 'NO', el pelo es colorado. Omite preguntar por colorado).");
+                colorEncontrado = true;
             }
 
             return false;
         }
 
+        // FASE 2: Una vez determinado el color de pelo, pregunta si usa lentes
+        if (!preguntoLentes) {
+            preguntoLentes = true;
+            Pregunta preguntaLentes = Pregunta.USA_LENTES;
+            boolean respuesta = preguntaLentes.cumple(objetivoEnemigo);
+
+            System.out.println("[" + nombre + "] Pregunta: \"" + preguntaLentes + "\"");
+            System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
+
+            int descartados = tablero.descartarSegun(preguntaLentes, respuesta);
+            System.out.println("[" + nombre + "] Descartó " + descartados
+                    + " candidatos. Le quedan " + tablero.getCantidadViva() + " candidatos.");
+
+            return false;
+        }
+
+        // FASE 3: Intenta adivinar aleatoriamente entre los personajes vivos restantes
         List<Personaje> vivos = new ArrayList<>();
         for (Personaje p : mazo) {
             if (tablero.estaVivo(p.getId())) {
