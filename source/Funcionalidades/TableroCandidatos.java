@@ -1,8 +1,10 @@
-package funcionalidades;
+package Funcionalidades;
+
+import datos.MazoPersonajes;
 
 import datos.Personaje;
 import datos.Pregunta;
-import interfaces.ITableroCandidatos;
+import Interfaces.ITableroCandidatos;
 
 public class TableroCandidatos implements ITableroCandidatos {
 

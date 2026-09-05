@@ -1,8 +1,8 @@
-package funcionalidades;
+package Funcionalidades;
 
 import datos.ModoJuego;
-import interfaces.IMenu;
-import interfaces.IPartida;
+import Interfaces.IMenu;
+import Interfaces.IPartida;
 
 import java.util.Scanner;
 

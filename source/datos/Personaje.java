@@ -1,6 +1,6 @@
 package datos;
 
-import interfaces.IPersonaje;
+import Interfaces.IPersonaje;
 import java.util.Objects;
 
 public class Personaje implements IPersonaje {

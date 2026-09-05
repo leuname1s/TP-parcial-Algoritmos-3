@@ -1,8 +1,11 @@
-package funcionalidades;
+package Funcionalidades;
+
+import datos.MazoPersonajes;
 
 import datos.Personaje;
-import interfaces.IMaquina;
-import interfaces.ITableroCandidatos;
+import Interfaces.IArbitroTurno;
+import Interfaces.IMaquina;
+import Interfaces.ITableroCandidatos;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +41,7 @@ public class Maquina1 implements IMaquina {
     }
 
     @Override
-    public boolean ejecutarTurno(Personaje objetivoEnemigo) {
+    public boolean ejecutarTurno(IArbitroTurno arbitro) {
         System.out.println("\n--- TURNO DE " + nombre.toUpperCase() + " ---");
 
         List<Personaje> vivos = new ArrayList<>();
@@ -57,7 +60,7 @@ public class Maquina1 implements IMaquina {
         System.out.println("[" + nombre + "] Intenta adivinar arriesgando por: "
                 + candidatoElegido.getNombre() + " (ID: " + candidatoElegido.getId() + ")");
 
-        if (candidatoElegido.getId() == objetivoEnemigo.getId()) {
+        if (arbitro.comprobarIntento(candidatoElegido.getId())) {
             System.out.println("\n**************************************************");
             System.out.println("   ¡" + nombre.toUpperCase() + " HA ADIVINADO EL PERSONAJE!   ");
             System.out.println("   El personaje era: " + candidatoElegido.getNombre() + " (ID: " + candidatoElegido.getId() + ")");

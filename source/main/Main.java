@@ -1,5 +1,7 @@
-import funcionalidades.MenuConsola;
-import interfaces.IMenu;
+package main;
+
+import Funcionalidades.MenuConsola;
+import Interfaces.IMenu;
 
 public class Main {
 

@@ -1,6 +1,6 @@
-package interfaces;
+package Interfaces;
 
-import funcionalidades.MazoPersonajes;
+import datos.MazoPersonajes;
 
 public interface ICatalogoPersonajes {
     MazoPersonajes obtenerMazo();

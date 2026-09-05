@@ -1,9 +1,12 @@
-package funcionalidades;
+package Funcionalidades;
+
+import datos.MazoPersonajes;
 
 import datos.Personaje;
 import datos.Pregunta;
-import interfaces.IMaquina;
-import interfaces.ITableroCandidatos;
+import Interfaces.IArbitroTurno;
+import Interfaces.IMaquina;
+import Interfaces.ITableroCandidatos;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,13 +51,13 @@ public class Maquina2 implements IMaquina {
     }
 
     @Override
-    public boolean ejecutarTurno(Personaje objetivoEnemigo) {
+    public boolean ejecutarTurno(IArbitroTurno arbitro) {
         System.out.println("\n--- TURNO DE " + nombre.toUpperCase() + " ---");
 
         // FASE 1: Averiguar color de pelo (preguntando únicamente por amarillo y luego negro)
         if (!colorEncontrado && indicePelo < PREGUNTAS_PELO.length) {
             Pregunta preguntaPelo = PREGUNTAS_PELO[indicePelo++];
-            boolean respuesta = preguntaPelo.cumple(objetivoEnemigo);
+            boolean respuesta = arbitro.responder(preguntaPelo);
 
             System.out.println("[" + nombre + "] Pregunta: \"" + preguntaPelo + "\"");
             System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
@@ -78,7 +81,7 @@ public class Maquina2 implements IMaquina {
         if (!preguntoLentes) {
             preguntoLentes = true;
             Pregunta preguntaLentes = Pregunta.USA_LENTES;
-            boolean respuesta = preguntaLentes.cumple(objetivoEnemigo);
+            boolean respuesta = arbitro.responder(preguntaLentes);
 
             System.out.println("[" + nombre + "] Pregunta: \"" + preguntaLentes + "\"");
             System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
@@ -107,7 +110,7 @@ public class Maquina2 implements IMaquina {
         System.out.println("[" + nombre + "] Arriesga adivinando aleatoriamente por: "
                 + candidatoElegido.getNombre() + " (ID: " + candidatoElegido.getId() + ")");
 
-        if (candidatoElegido.getId() == objetivoEnemigo.getId()) {
+        if (arbitro.comprobarIntento(candidatoElegido.getId())) {
             System.out.println("\n**************************************************");
             System.out.println("   ¡" + nombre.toUpperCase() + " HA ADIVINADO EL PERSONAJE!   ");
             System.out.println("   El personaje era: " + candidatoElegido.getNombre() + " (ID: " + candidatoElegido.getId() + ")");

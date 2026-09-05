@@ -1,6 +1,5 @@
-package funcionalidades;
+package datos;
 
-import datos.Personaje;
 
 class Nodo {
     final Personaje dato;

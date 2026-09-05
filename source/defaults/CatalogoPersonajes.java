@@ -1,8 +1,9 @@
-package funcionalidades;
+package defaults;
 
+import datos.MazoPersonajes;
 import datos.ColorPelo;
 import datos.Genero;
-import interfaces.ICatalogoPersonajes;
+import Interfaces.ICatalogoPersonajes;
 
 import static datos.ColorPelo.AMARILLO;
 import static datos.ColorPelo.COLORADO;

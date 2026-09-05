@@ -1,11 +1,15 @@
-package funcionalidades;
+package Funcionalidades;
+
+import datos.MazoPersonajes;
+import defaults.CatalogoPersonajes;
 
 import datos.ModoJuego;
 import datos.Personaje;
 import datos.Pregunta;
-import interfaces.IMaquina;
-import interfaces.IPartida;
-import interfaces.ITableroCandidatos;
+import Interfaces.IArbitroTurno;
+import Interfaces.IMaquina;
+import Interfaces.IPartida;
+import Interfaces.ITableroCandidatos;
 
 import java.util.Random;
 import java.util.Scanner;
@@ -141,10 +145,10 @@ public class Partida implements IPartida {
             System.out.println("Tu personaje secreto: " + personajeJugador.getNombre() + " (ID: " + personajeJugador.getId() + ")");
             System.out.println("Tablero del Jugador: " + tableroJugador.getCantidadViva() + " candidatos vivos.");
         }
-        if (objetivoMaquina1 != null) {
+        if (modo == ModoJuego.MAQUINA_1_VS_MAQUINA_2 && objetivoMaquina1 != null) {
             System.out.println("Objetivo secreto de Máquina 1 (a adivinar): " + objetivoMaquina1.getNombre() + " (ID: " + objetivoMaquina1.getId() + ")");
         }
-        if (objetivoMaquina2 != null) {
+        if (modo == ModoJuego.MAQUINA_1_VS_MAQUINA_2 && objetivoMaquina2 != null) {
             System.out.println("Objetivo secreto de Máquina 2 (a adivinar): " + objetivoMaquina2.getNombre() + " (ID: " + objetivoMaquina2.getId() + ")");
         }
         System.out.println("------------------------------------------\n");
@@ -249,7 +253,7 @@ public class Partida implements IPartida {
             }
 
             // Turno de la máquina enemiga
-            boolean victoriaMaquina = maquinaEnemiga.ejecutarTurno(personajeJugador);
+            boolean victoriaMaquina = ejecutarTurnoMaquina(maquinaEnemiga, personajeJugador);
             if (victoriaMaquina) {
                 ganoJugador = false;
                 finDeJuego = true;
@@ -260,6 +264,20 @@ public class Partida implements IPartida {
         }
 
         return ganoJugador;
+    }
+
+    private boolean ejecutarTurnoMaquina(IMaquina maquina, final Personaje objetivoEnemigo) {
+        return maquina.ejecutarTurno(new IArbitroTurno() {
+            @Override
+            public boolean responder(Pregunta pregunta) {
+                return pregunta.cumple(objetivoEnemigo);
+            }
+
+            @Override
+            public boolean comprobarIntento(int id) {
+                return id == objetivoEnemigo.getId();
+            }
+        });
     }
 
     private boolean turnoJugador(Personaje objetivoEnemigo) {
@@ -383,13 +401,13 @@ public class Partida implements IPartida {
             System.out.println("==========================================");
 
             // Turno de Máquina 1 buscando a objetivoMaquina2
-            finDeJuego = maquina1.ejecutarTurno(objetivoMaquina2);
+            finDeJuego = ejecutarTurnoMaquina(maquina1, objetivoMaquina2);
             if (finDeJuego) {
                 break;
             }
 
             // Turno de Máquina 2 buscando a objetivoMaquina1
-            finDeJuego = maquina2.ejecutarTurno(objetivoMaquina1);
+            finDeJuego = ejecutarTurnoMaquina(maquina2, objetivoMaquina1);
             if (finDeJuego) {
                 break;
             }

@@ -1,9 +1,6 @@
-package funcionalidades;
+package datos;
 
-import datos.ColorPelo;
-import datos.Genero;
-import datos.Personaje;
-import interfaces.IMazoPersonajes;
+import Interfaces.IMazoPersonajes;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;

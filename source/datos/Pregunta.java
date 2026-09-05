@@ -1,6 +1,6 @@
 package datos;
 
-import interfaces.EvaluadorPregunta;
+import Interfaces.EvaluadorPregunta;
 
 public enum Pregunta implements EvaluadorPregunta {
 

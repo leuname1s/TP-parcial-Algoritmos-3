@@ -1,4 +1,4 @@
-package interfaces;
+package Interfaces;
 
 import datos.Personaje;
 
