@@ -46,8 +46,8 @@ public final class CatalogoPersonajes implements ICatalogoPersonajes {
         agregar(catalogo, "Roc Marciano", MASCULINO, NEGRO, true, true, false);
         agregar(catalogo, "Mateo", MASCULINO, NEGRO, true, false, false);
         agregar(catalogo, "Bruno", MASCULINO, NEGRO, false, true, false);
-        agregar(catalogo, "Gael", MASCULINO, NEGRO, false, false, false);
-        agregar(catalogo, "Pablito Lescano", MASCULINO, RUBIO, true, true, false);
+        agregar(catalogo, "Gael", MASCULINO, RUBIO, true, true, false);
+        agregar(catalogo, "Pablito Lescano", MASCULINO, NEGRO, false, false, false);
         agregar(catalogo, "Thiago", MASCULINO, RUBIO, true, false, false);
         agregar(catalogo, "Bautista", MASCULINO, RUBIO, false, true, false);
         agregar(catalogo, "Benjamín", MASCULINO, RUBIO, false, false, false);
