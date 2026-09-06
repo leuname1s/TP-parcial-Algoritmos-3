@@ -2,47 +2,70 @@ package datos;
 
 import Interfaces.IMazoPersonajes;
 
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class MazoPersonajes implements IMazoPersonajes {
 
     public static final int TOTAL = 23;
-    private static final int COMBINACIONES = 24;
+    private static final int COMBINACIONES = Genero.values().length * ColorPelo.values().length * 8;
 
     private Nodo cabeza;
-    private final Personaje[] indicePorId = new Personaje[TOTAL + 1];
+    private Personaje[] indicePorId = new Personaje[1];
+    private final int capacidad;
     private final Personaje[] duenoDeCombinacion = new Personaje[COMBINACIONES];
 
     private int cantidad = 0;
 
-    @Override
-    public Personaje agregar(String nombre, Genero genero, boolean calvo, boolean lentes, ColorPelo colorPelo) {
-        if (cantidad == TOTAL) {
-            throw new IllegalStateException("El mazo ya tiene " + TOTAL + " personajes");
-        }
-        int id = cantidad + 1;
-        int codigo = codigoDe(genero, calvo, lentes, colorPelo);
-        if (duenoDeCombinacion[codigo] != null) {
-            throw new IllegalArgumentException(
-                    "Combinacion repetida: " + nombre + " es identico a "
-                            + duenoDeCombinacion[codigo].getNombre());
-        }
-        Personaje p = new Personaje(id, nombre, genero, colorPelo, lentes, calvo);
-        insertarOrdenado(p);
-        indicePorId[id] = p;
-        cantidad++;
-        duenoDeCombinacion[codigo] = p;
-        return p;
+    public MazoPersonajes() {
+        this(TOTAL);
     }
 
-    private static int codigoDe(Genero genero, boolean calvo,
-                                boolean lentes, ColorPelo colorPelo) {
-        int codigo = genero.getOrden();
-        codigo = codigo * ColorPelo.values().length + colorPelo.ordinal();
-        codigo = codigo * 2 + (calvo ? 1 : 0);
-        codigo = codigo * 2 + (lentes ? 1 : 0);
+    public MazoPersonajes(int capacidad) {
+        if (capacidad < 1) {
+            throw new IllegalArgumentException("La capacidad debe ser positiva");
+        }
+        this.capacidad = capacidad;
+    }
+
+    @Override
+    public void agregar(Personaje p) {
+        Objects.requireNonNull(p);
+        if (cantidad == capacidad) {
+            throw new IllegalStateException("El mazo ya tiene " + capacidad + " personajes");
+        }
+        if (buscarPorId(p.getId()) != null) {
+            throw new IllegalArgumentException("ID repetido: " + p.getId());
+        }
+        int codigo = codigoDe(p);
+        if (duenoDeCombinacion[codigo] != null) {
+            throw new IllegalArgumentException(
+                    "Combinacion repetida: " + p.getNombre() + " es identico a "
+                            + duenoDeCombinacion[codigo].getNombre());
+        }
+        if (p.getId() >= indicePorId.length) {
+            indicePorId = Arrays.copyOf(indicePorId, p.getId() + 1);
+        }
+        insertarOrdenado(p);
+        indicePorId[p.getId()] = p;
+        cantidad++;
+        duenoDeCombinacion[codigo] = p;
+    }
+
+    private static int codigoDe(Personaje p) {
+        int codigo = p.getGenero().getOrden();
+        codigo = codigo * ColorPelo.values().length + p.getColorPelo().ordinal();
+        codigo = codigo * 2 + (p.isTieneLentes() ? 1 : 0);
+        codigo = codigo * 2 + (p.isTieneBarba() ? 1 : 0);
+        codigo = codigo * 2 + (p.isLeFaltaUnDiente() ? 1 : 0);
         return codigo;
+    }
+
+    @Override
+    public int getMaxId() {
+        return indicePorId.length - 1;
     }
 
     private void insertarOrdenado(Personaje p) {
@@ -63,7 +86,7 @@ public class MazoPersonajes implements IMazoPersonajes {
 
     @Override
     public Personaje buscarPorId(int id) {
-        if (id < 1 || id > TOTAL) {
+        if (id < 1 || id >= indicePorId.length) {
             return null;
         }
         return indicePorId[id];
@@ -76,7 +99,7 @@ public class MazoPersonajes implements IMazoPersonajes {
 
     @Override
     public boolean estaCompleto() {
-        return cantidad == TOTAL;
+        return cantidad == capacidad;
     }
 
     @Override

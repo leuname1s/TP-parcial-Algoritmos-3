@@ -9,5 +9,6 @@ public interface IPersonaje {
     Genero getGenero();
     ColorPelo getColorPelo();
     boolean isTieneLentes();
-    boolean isTienePelo();
+    boolean isTieneBarba();
+    boolean isLeFaltaUnDiente();
 }

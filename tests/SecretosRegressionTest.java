@@ -39,6 +39,10 @@ public class SecretosRegressionTest {
                 Partida game = new Partida(new Scanner(""));
                 seed(game, seed);
                 game.iniciar(ModoJuego.MAQUINA_1_VS_MAQUINA_2);
+                check(game.getObjetivoMaquina1().getId() != game.getObjetivoMaquina2().getId(),
+                        "Spectator machines share a secret");
+                check(game.getTableroMaquina1().estaVivo(game.getObjetivoMaquina2().getId()),
+                        "Spectator target absent from deck");
                 output.reset();
                 game.jugar();
                 check(text().contains("HA ADIVINADO"), "Spectator game did not finish");
@@ -46,7 +50,7 @@ public class SecretosRegressionTest {
         } finally {
             System.setOut(original);
         }
-        System.out.println("PASS: secret visibility, arbiter API, 920 machine searches, "
+        System.out.println("PASS: secret visibility, arbiter API, 1440 machine searches, "
                 + "both second-phase orders and 100 spectator games");
     }
 
@@ -66,7 +70,7 @@ public class SecretosRegressionTest {
     }
 
     private static void checkMachineTurns() throws Exception {
-        MazoPersonajes deck = CatalogoPersonajes.crearMazo();
+        MazoPersonajes deck = CatalogoPersonajes.crearCatalogo();
         Partida referee = new Partida(new Scanner(""));
         Method turn = Partida.class.getDeclaredMethod("ejecutarTurnoMaquina", IMaquina.class, Personaje.class);
         turn.setAccessible(true);
@@ -83,7 +87,17 @@ public class SecretosRegressionTest {
                                 ? new Maquina1(deck, previous) : new Maquina2(deck, previous);
                         seed(machine, seed);
                         boolean won = false;
-                        int limit = kind == 1 ? 23 : 7;
+                        int limit = deck.getCantidad();
+                        if (kind == 2) {
+                            int matching = 0;
+                            for (Personaje candidate : deck) {
+                                if (candidate.getColorPelo() == target.getColorPelo()
+                                        && candidate.isTieneLentes() == target.isTieneLentes()) {
+                                    matching++;
+                                }
+                            }
+                            limit = 4 + matching;
+                        }
                         for (int round = 0; round < limit && !won; round++) {
                             output.reset();
                             won = (Boolean) turn.invoke(referee, machine, target);
@@ -93,7 +107,7 @@ public class SecretosRegressionTest {
                                         "Machine declared the wrong winner");
                             }
                         }
-                        check(won, "Machine failed to find target within its original turn limit");
+                        check(won, "Machine failed to find target within its strategy turn limit");
                         check(previous.getCantidadViva() == originalCount, "Inherited board was mutated");
                     }
                 }
@@ -103,27 +117,20 @@ public class SecretosRegressionTest {
 
     private static void checkSecondPhase(ModoJuego mode) throws Exception {
         Random expected = new Random(9);
-        int firstSecret = expected.nextInt(23) + 1;
-        int secondSecret = expected.nextInt(23) + 1;
-        // One question gives the first machine a turn before the player wins.
-        String input = "1\n1\n1\n1\n2\n" + firstSecret + "\n1\n2\n" + secondSecret + "\n";
-        Partida game = new Partida(new Scanner(input));
-        seed(game, 9);
+        MazoPersonajes deck = CatalogoPersonajes.crearMazo(expected);
+        Personaje player = deck.iterator().next();
+        Personaje firstSecret = select(deck, expected, null);
+        Personaje secondSecret = select(deck, expected, firstSecret);
+        String input = "1\n" + player.getId() + "\n1\n1\n2\n" + firstSecret.getId()
+                + "\n1\n2\n" + secondSecret.getId() + "\n1\n";
+        Partida game = new Partida(new Scanner(input), new Random(9));
         game.iniciar(mode);
         Field firstField = Partida.class.getDeclaredField(
                 mode == ModoJuego.JUGADOR_VS_MAQUINA_1 ? "maquina1" : "maquina2");
         firstField.setAccessible(true);
         IMaquina first = (IMaquina) firstField.get(game);
-        // Fix the random first guess to a character other than the player's ID 1.
-        MazoPersonajes deck = CatalogoPersonajes.crearMazo();
         int safeSeed = 0;
-        while (true) {
-            int index = new Random(safeSeed).nextInt(23);
-            Personaje guess = null;
-            for (Personaje candidate : deck) {
-                if (index-- == 0) { guess = candidate; break; }
-            }
-            if (guess.getId() != 1) { break; }
+        while (select(deck, new Random(safeSeed), null).getId() == player.getId()) {
             safeSeed++;
         }
         seed(first, safeSeed);
@@ -131,14 +138,35 @@ public class SecretosRegressionTest {
         game.jugar();
         check(text().contains("INICIANDO FASE 2"), "Second phase missing");
         check(!text().contains("Objetivo secreto de"), "Second phase leaked a secret");
-        check(game.getPersonajeJugador().getId() == 1, "Player secret changed");
-        check(game.getTableroJugador().getCantidadViva() == 23, "Player board not reset");
-        for (int id = 1; id <= 23; id++) {
+        check(game.getPersonajeJugador().getId() == player.getId(), "Player secret changed");
+        check(game.getObjetivoMaquina1().getId() != game.getObjetivoMaquina2().getId(),
+                "Machines share a secret across phases");
+        check(game.getTableroJugador().getCantidadViva() == 22, "Player board must start with 22 candidates");
+        check(!game.getTableroJugador().estaVivo(firstSecret.getId()), "Previous secret was not excluded");
+        for (int id = 1; id <= CatalogoPersonajes.TOTAL_CATALOGO; id++) {
             check(game.getTableroMaquina1().estaVivo(id) == game.getTableroMaquina2().estaVivo(id),
                     "Second machine did not inherit candidates");
+            check(game.getTableroJugador().estaVivo(id)
+                            == (deck.buscarPorId(id) != null && id != firstSecret.getId()),
+                    "Deck changed between phases");
         }
-        check(text().contains("El personaje secreto era: " + deck.buscarPorId(secondSecret).getNombre()),
+        check(text().contains("El personaje secreto era: " + secondSecret.getNombre()),
                 "Second phase did not finish against the correct secret");
+        Method question = Partida.class.getDeclaredMethod("hacerPreguntaJugador", Personaje.class);
+        question.setAccessible(true);
+        output.reset();
+        check((Boolean) question.invoke(game, secondSecret), "Question unavailable for new secret");
+        check(!text().contains("Ya realizaste esa pregunta"), "Question history was not reset");
+    }
+
+    private static Personaje select(MazoPersonajes deck, Random random, Personaje excluded) {
+        int index = random.nextInt(deck.getCantidad() - (excluded == null ? 0 : 1));
+        for (Personaje p : deck) {
+            if (!p.equals(excluded) && index-- == 0) {
+                return p;
+            }
+        }
+        throw new AssertionError("No character selected");
     }
 
     private static void seed(Object object, long value) throws Exception {

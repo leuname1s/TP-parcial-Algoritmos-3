@@ -1,7 +1,7 @@
 package Interfaces;
 
-import datos.MazoPersonajes;
+import datos.Personaje;
 
 public interface ICatalogoPersonajes {
-    MazoPersonajes obtenerMazo();
+    Iterable<Personaje> obtenerPersonajes();
 }

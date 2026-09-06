@@ -1,7 +1,8 @@
 package datos;
 
 public enum ColorPelo {
-    COLORADO,
+    PELIRROJO,
     NEGRO,
-    AMARILLO
+    RUBIO,
+    PELADO
 }

@@ -19,7 +19,7 @@ public enum Pregunta implements EvaluadorPregunta {
     ES_CALVO("Es pelado") {
         @Override
         public boolean cumple(Personaje p) {
-            return p.isTienePelo();
+            return p.getColorPelo() == ColorPelo.PELADO;
         }
     },
     USA_LENTES("Usa lentes") {
@@ -28,10 +28,10 @@ public enum Pregunta implements EvaluadorPregunta {
             return p.isTieneLentes();
         }
     },
-    PELO_COLORADO("Tiene el pelo colorado") {
+    PELO_PELIRROJO("Tiene el pelo pelirrojo") {
         @Override
         public boolean cumple(Personaje p) {
-            return p.getColorPelo() == ColorPelo.COLORADO;
+            return p.getColorPelo() == ColorPelo.PELIRROJO;
         }
     },
     PELO_NEGRO("Tiene el pelo negro") {
@@ -40,10 +40,22 @@ public enum Pregunta implements EvaluadorPregunta {
             return p.getColorPelo() == ColorPelo.NEGRO;
         }
     },
-    PELO_AMARILLO("Tiene el pelo amarillo") {
+    PELO_RUBIO("Tiene el pelo rubio") {
         @Override
         public boolean cumple(Personaje p) {
-            return p.getColorPelo() == ColorPelo.AMARILLO;
+            return p.getColorPelo() == ColorPelo.RUBIO;
+        }
+    },
+    TIENE_BARBA("Tiene barba") {
+        @Override
+        public boolean cumple(Personaje p) {
+            return p.isTieneBarba();
+        }
+    },
+    LE_FALTA_UN_DIENTE("Le falta un diente") {
+        @Override
+        public boolean cumple(Personaje p) {
+            return p.isLeFaltaUnDiente();
         }
     };
 

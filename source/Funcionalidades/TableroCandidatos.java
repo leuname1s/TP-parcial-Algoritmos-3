@@ -14,9 +14,9 @@ public class TableroCandidatos implements ITableroCandidatos {
 
     public TableroCandidatos(MazoPersonajes mazo) {
         this.mazo = mazo;
-        this.vivo = new boolean[MazoPersonajes.TOTAL + 1];
-        for (int id = 1; id <= mazo.getCantidad(); id++) {
-            vivo[id] = true;
+        this.vivo = new boolean[mazo.getMaxId() + 1];
+        for (Personaje p : mazo) {
+            vivo[p.getId()] = true;
         }
         this.cantidadViva = mazo.getCantidad();
     }
@@ -30,7 +30,7 @@ public class TableroCandidatos implements ITableroCandidatos {
 
     @Override
     public boolean estaVivo(int id) {
-        return id >= 1 && id <= MazoPersonajes.TOTAL && vivo[id];
+        return id >= 1 && id < vivo.length && vivo[id];
     }
 
     @Override

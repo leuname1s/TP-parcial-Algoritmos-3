@@ -9,15 +9,20 @@ public class Personaje implements IPersonaje {
     private final Genero genero;
     private final ColorPelo colorPelo;
     private final boolean tieneLentes;
-    private final boolean tienePelo;
+    private final boolean tieneBarba;
+    private final boolean leFaltaUnDiente;
 
-    public Personaje(int id, String nombre, Genero genero, ColorPelo colorPelo, boolean tieneLentes, boolean tienePelo) {
+    public Personaje(int id, String nombre, Genero genero, ColorPelo colorPelo, boolean tieneLentes, boolean tieneBarba, boolean leFaltaUnDiente) {
+        if (id < 1) {
+            throw new IllegalArgumentException("El ID debe ser positivo");
+        }
         this.id = id;
         this.nombre = Objects.requireNonNull(nombre);
         this.genero = Objects.requireNonNull(genero);
         this.colorPelo = Objects.requireNonNull(colorPelo);
         this.tieneLentes = tieneLentes;
-        this.tienePelo = tienePelo;
+        this.tieneBarba = tieneBarba;
+        this.leFaltaUnDiente = leFaltaUnDiente;
     }
 
     @Override
@@ -36,7 +41,10 @@ public class Personaje implements IPersonaje {
     public boolean isTieneLentes() { return tieneLentes; }
 
     @Override
-    public boolean isTienePelo() { return tienePelo; }
+    public boolean isTieneBarba() { return tieneBarba; }
+
+    @Override
+    public boolean isLeFaltaUnDiente() { return leFaltaUnDiente; }
 
     @Override
     public boolean equals(Object o) {
@@ -52,11 +60,12 @@ public class Personaje implements IPersonaje {
 
     @Override
     public String toString() {
-        return String.format("[%02d] %-10s %s | %s | %s | pelo %s",
+        return String.format("[%02d] %-16s %s | %s | %s | %s | %s",
                 id, nombre,
                 genero == Genero.FEMENINO ? "F" : "M",
-                tienePelo ? "calvo " : "peludo",
-                tieneLentes ? "lentes  " : "sin lentes",
-                colorPelo);
+                colorPelo == ColorPelo.PELADO ? "pelado" : "pelo " + colorPelo,
+                tieneLentes ? "con lentes" : "sin lentes",
+                tieneBarba ? "con barba" : "sin barba",
+                leFaltaUnDiente ? "le falta un diente" : "dentadura completa");
     }
 }

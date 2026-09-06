@@ -24,8 +24,9 @@ public class Maquina2 implements IMaquina {
     private boolean preguntoLentes = false;
 
     private static final Pregunta[] PREGUNTAS_PELO = {
-            Pregunta.PELO_AMARILLO,
-            Pregunta.PELO_NEGRO
+            Pregunta.PELO_RUBIO,
+            Pregunta.PELO_NEGRO,
+            Pregunta.PELO_PELIRROJO
     };
 
     public Maquina2(MazoPersonajes mazo) {
@@ -54,7 +55,7 @@ public class Maquina2 implements IMaquina {
     public boolean ejecutarTurno(IArbitroTurno arbitro) {
         System.out.println("\n--- TURNO DE " + nombre.toUpperCase() + " ---");
 
-        // FASE 1: Averiguar color de pelo (preguntando únicamente por amarillo y luego negro)
+        // FASE 1: Averiguar color de pelo (preguntando por rubio, negro y pelirrojo)
         if (!colorEncontrado && indicePelo < PREGUNTAS_PELO.length) {
             Pregunta preguntaPelo = PREGUNTAS_PELO[indicePelo++];
             boolean respuesta = arbitro.responder(preguntaPelo);
@@ -69,8 +70,8 @@ public class Maquina2 implements IMaquina {
             if (respuesta) {
                 colorEncontrado = true; // Si es SÍ, se descubrió el color y salta el resto de preguntas de pelo
             } else if (indicePelo == PREGUNTAS_PELO.length) {
-                // Al recibir el 2do NO, deduce por descarte que el pelo debe ser colorado y omite la pregunta
-                System.out.println("[" + nombre + "] (Deducción lógica: Al recibir 2 'NO', el pelo es colorado. Omite preguntar por colorado).");
+                // All three colors were rejected, so only PELADO remains.
+                System.out.println("[" + nombre + "] (Deducción lógica: Al recibir 3 'NO', el personaje es pelado. Omite preguntar por calvicie).");
                 colorEncontrado = true;
             }
 
