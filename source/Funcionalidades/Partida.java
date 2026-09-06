@@ -185,7 +185,7 @@ public class Partida implements IPartida {
 
         boolean ganoJugadorFase1 = ejecutarBuclePartida(maquinaEnemigaInicial, objetivoEnemigoInicial);
 
-        // Si el jugador gana la Fase 1, se le ofrece desafiar a la otra máquina
+        // Only a first-phase victory can unlock the optional challenge.
         if (ganoJugadorFase1) {
             boolean quiereContinuar = ofrecerDesafioSegundaMaquina(maquinaEnemigaInicial);
             if (quiereContinuar) {
@@ -200,6 +200,13 @@ public class Partida implements IPartida {
         System.out.println("\n==========================================");
         System.out.println("   ¡VICTORIA CONTRA " + maquinaDerrotada.getNombre().toUpperCase() + "!   ");
         System.out.println("==========================================");
+        int descartados = mazo.getCantidad() - maquinaDerrotada.getTablero().getCantidadViva();
+        if (descartados >= 15) {
+            System.out.println("La máquina descartó " + descartados
+                    + " personajes. La segunda fase requiere menos de 15 descartes.");
+            System.out.println("La partida finaliza con tu victoria en la primera fase.");
+            return false;
+        }
         System.out.println("¿Deseas continuar en esta misma partida desafiando a " + nombreSiguiente + "?");
         System.out.println("  1. Sí, pelear contra " + nombreSiguiente);
         System.out.println("  2. No, finalizar la partida");

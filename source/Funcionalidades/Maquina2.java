@@ -1,15 +1,11 @@
 package Funcionalidades;
 
 import datos.MazoPersonajes;
-
-import datos.Personaje;
-import datos.Pregunta;
 import Interfaces.IArbitroTurno;
 import Interfaces.IMaquina;
 import Interfaces.ITableroCandidatos;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 public class Maquina2 implements IMaquina {
@@ -19,26 +15,18 @@ public class Maquina2 implements IMaquina {
     private final MazoPersonajes mazo;
     private final Random random;
 
-    private int indicePelo = 0;
-    private boolean colorEncontrado = false;
-    private boolean preguntoLentes = false;
-
-    private static final Pregunta[] PREGUNTAS_PELO = {
-            Pregunta.PELO_RUBIO,
-            Pregunta.PELO_NEGRO,
-            Pregunta.PELO_PELIRROJO
-    };
-
     public Maquina2(MazoPersonajes mazo) {
-        this.mazo = mazo;
-        this.tablero = new TableroCandidatos(mazo);
-        this.random = new Random();
+        this(mazo, new TableroCandidatos(mazo), new Random());
     }
 
     public Maquina2(MazoPersonajes mazo, TableroCandidatos tableroHeredado) {
-        this.mazo = mazo;
+        this(mazo, tableroHeredado, new Random());
+    }
+
+    public Maquina2(MazoPersonajes mazo, TableroCandidatos tableroHeredado, Random random) {
+        this.mazo = Objects.requireNonNull(mazo);
         this.tablero = new TableroCandidatos(tableroHeredado);
-        this.random = new Random();
+        this.random = Objects.requireNonNull(random);
     }
 
     @Override
@@ -53,76 +41,6 @@ public class Maquina2 implements IMaquina {
 
     @Override
     public boolean ejecutarTurno(IArbitroTurno arbitro) {
-        System.out.println("\n--- TURNO DE " + nombre.toUpperCase() + " ---");
-
-        // FASE 1: Averiguar color de pelo (preguntando por rubio, negro y pelirrojo)
-        if (!colorEncontrado && indicePelo < PREGUNTAS_PELO.length) {
-            Pregunta preguntaPelo = PREGUNTAS_PELO[indicePelo++];
-            boolean respuesta = arbitro.responder(preguntaPelo);
-
-            System.out.println("[" + nombre + "] Pregunta: \"" + preguntaPelo + "\"");
-            System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
-
-            int descartados = tablero.descartarSegun(preguntaPelo, respuesta);
-            System.out.println("[" + nombre + "] Descartó " + descartados
-                    + " candidatos. Le quedan " + tablero.getCantidadViva() + " candidatos.");
-
-            if (respuesta) {
-                colorEncontrado = true; // Si es SÍ, se descubrió el color y salta el resto de preguntas de pelo
-            } else if (indicePelo == PREGUNTAS_PELO.length) {
-                // All three colors were rejected, so only PELADO remains.
-                System.out.println("[" + nombre + "] (Deducción lógica: Al recibir 3 'NO', el personaje es pelado. Omite preguntar por calvicie).");
-                colorEncontrado = true;
-            }
-
-            return false;
-        }
-
-        // FASE 2: Una vez determinado el color de pelo, pregunta si usa lentes
-        if (!preguntoLentes) {
-            preguntoLentes = true;
-            Pregunta preguntaLentes = Pregunta.USA_LENTES;
-            boolean respuesta = arbitro.responder(preguntaLentes);
-
-            System.out.println("[" + nombre + "] Pregunta: \"" + preguntaLentes + "\"");
-            System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
-
-            int descartados = tablero.descartarSegun(preguntaLentes, respuesta);
-            System.out.println("[" + nombre + "] Descartó " + descartados
-                    + " candidatos. Le quedan " + tablero.getCantidadViva() + " candidatos.");
-
-            return false;
-        }
-
-        // FASE 3: Intenta adivinar aleatoriamente entre los personajes vivos restantes
-        List<Personaje> vivos = new ArrayList<>();
-        for (Personaje p : mazo) {
-            if (tablero.estaVivo(p.getId())) {
-                vivos.add(p);
-            }
-        }
-
-        if (vivos.isEmpty()) {
-            System.out.println("[" + nombre + "] No le quedan candidatos vivos.");
-            return false;
-        }
-
-        Personaje candidatoElegido = vivos.get(random.nextInt(vivos.size()));
-        System.out.println("[" + nombre + "] Arriesga adivinando aleatoriamente por: "
-                + candidatoElegido.getNombre() + " (ID: " + candidatoElegido.getId() + ")");
-
-        if (arbitro.comprobarIntento(candidatoElegido.getId())) {
-            System.out.println("\n**************************************************");
-            System.out.println("   ¡" + nombre.toUpperCase() + " HA ADIVINADO EL PERSONAJE!   ");
-            System.out.println("   El personaje era: " + candidatoElegido.getNombre() + " (ID: " + candidatoElegido.getId() + ")");
-            System.out.println("**************************************************\n");
-            return true;
-        } else {
-            System.out.println("[" + nombre + "] Falló la adivinanza.");
-            tablero.descartar(candidatoElegido.getId());
-            System.out.println("[" + nombre + "] Descartó a " + candidatoElegido.getNombre()
-                    + " de su tablero. Le quedan " + tablero.getCantidadViva() + " candidatos.");
-            return false;
-        }
+        return EstrategiaMaquina.EQUILIBRADA.ejecutarTurno(nombre, mazo, tablero, random, arbitro);
     }
 }

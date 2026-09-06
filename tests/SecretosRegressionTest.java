@@ -84,24 +84,18 @@ public class SecretosRegressionTest {
                         }
                         int originalCount = previous.getCantidadViva();
                         IMaquina machine = kind == 1
-                                ? new Maquina1(deck, previous) : new Maquina2(deck, previous);
-                        seed(machine, seed);
+                                ? new Maquina1(deck, previous, new Random(seed))
+                                : new Maquina2(deck, previous, new Random(seed));
                         boolean won = false;
-                        int limit = deck.getCantidad();
-                        if (kind == 2) {
-                            int matching = 0;
-                            for (Personaje candidate : deck) {
-                                if (candidate.getColorPelo() == target.getColorPelo()
-                                        && candidate.isTieneLentes() == target.isTieneLentes()) {
-                                    matching++;
-                                }
-                            }
-                            limit = 4 + matching;
-                        }
+                        // Each unsuccessful turn must eliminate at least one candidate.
+                        int limit = originalCount;
                         for (int round = 0; round < limit && !won; round++) {
                             output.reset();
+                            int before = machine.getTablero().getCantidadViva();
                             won = (Boolean) turn.invoke(referee, machine, target);
                             check(machine.getTablero().estaVivo(target.getId()), "Correct target discarded");
+                            check(won || machine.getTablero().getCantidadViva() < before,
+                                    "Unsuccessful turn made no progress");
                             if (won) {
                                 check(text().contains("El personaje era: " + target.getNombre()),
                                         "Machine declared the wrong winner");
@@ -129,11 +123,16 @@ public class SecretosRegressionTest {
                 mode == ModoJuego.JUGADOR_VS_MAQUINA_1 ? "maquina1" : "maquina2");
         firstField.setAccessible(true);
         IMaquina first = (IMaquina) firstField.get(game);
-        int safeSeed = 0;
-        while (select(deck, new Random(safeSeed), null).getId() == player.getId()) {
-            safeSeed++;
-        }
-        seed(first, safeSeed);
+        // Force a failed guess so both strategies leave the optional phase available.
+        Random failedGuess = new Random(0) {
+            private static final long serialVersionUID = 1L;
+            @Override public double nextDouble() { return 0.0; }
+            @Override public int nextInt(int bound) { return 1; }
+        };
+        first = mode == ModoJuego.JUGADOR_VS_MAQUINA_1
+                ? new Maquina1(deck, (TableroCandidatos) first.getTablero(), failedGuess)
+                : new Maquina2(deck, (TableroCandidatos) first.getTablero(), failedGuess);
+        firstField.set(game, first);
         output.reset();
         game.jugar();
         check(text().contains("INICIANDO FASE 2"), "Second phase missing");

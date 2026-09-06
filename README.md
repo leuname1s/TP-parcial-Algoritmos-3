@@ -25,9 +25,9 @@ README.md                Descripción e instrucciones del proyecto
 | `source/main` | `Main` inicia el programa y abre el menú de consola. |
 | `source/defaults` | `CatalogoPersonajes` define los 36 personajes, asigna sus ID en orden de incorporación y sortea los 23 de cada partida. |
 | `source/datos` | `Personaje` contiene los atributos de un personaje. `MazoPersonajes` administra la colección con una lista enlazada e índice por ID; también se reutiliza con capacidad 36 para construir el catálogo. `Nodo` es un elemento de esa lista. `Genero`, `ColorPelo` y `ModoJuego` enumeran las opciones disponibles. `Pregunta` define las preguntas y cómo evaluar cada una. |
-| `source/Funcionalidades` | `MenuConsola` permite elegir el modo de juego. `Partida` coordina la selección de secretos, los turnos y las fases. `Maquina1` y `Maquina2` implementan las estrategias. `TableroCandidatos` lleva los descartes de cada participante. Actualmente la entrada y salida por consola también están dentro de estas clases. |
+| `source/Funcionalidades` | `MenuConsola` permite elegir el modo de juego. `Partida` coordina la selección de secretos, los turnos y las fases. `Maquina1` y `Maquina2` usan `EstrategiaMaquina` para compartir los cálculos y la ejecución del turno con comportamientos diferentes. `TableroCandidatos` lleva los descartes de cada participante. Actualmente la entrada y salida por consola también están dentro de estas clases. |
 | `source/Interfaces` | Define los métodos que deben ofrecer las implementaciones, por ejemplo `IPartida`, `IMaquina` e `ITableroCandidatos`. `IArbitroTurno` permite a las máquinas consultar respuestas y comprobar intentos sin recibir el personaje secreto rival. Estas interfaces son contratos de Java, no pantallas gráficas. |
-| `tests` | Contiene tres programas de prueba que verifican personajes y mazos, entradas del jugador y protección de secretos. Se ejecutan por separado del juego. |
+| `tests` | Contiene cinco programas de prueba que verifican personajes y mazos, entradas del jugador, protección de secretos, estrategias, segunda fase y registro de decisiones. Se ejecutan por separado del juego. |
 
 Al ejecutar el juego, `Main` abre `MenuConsola`. El menú crea una `Partida`, que
 obtiene un mazo de `CatalogoPersonajes` y prepara los tableros y las máquinas.
@@ -92,6 +92,8 @@ Después de compilar, ejecutar:
 java -cp build PersonajesMazoRegressionTest
 java -cp build EntradaJugadorRegressionTest
 java -cp build SecretosRegressionTest
+java -cp build Funcionalidades.EstrategiasPartidaRegressionTest
+java -cp build Funcionalidades.DiagnosticoMaquinasRegressionTest
 ```
 
 | Prueba | Qué verifica |
@@ -99,6 +101,8 @@ java -cp build SecretosRegressionTest
 | `PersonajesMazoRegressionTest` | Los 36 perfiles distinguibles, el sorteo de mazos, los ID no consecutivos, los filtros y la independencia de los tableros. |
 | `EntradaJugadorRegressionTest` | El rechazo de preguntas repetidas y de ID ausentes o descartados, el menú cuando se agotan las preguntas y el reinicio de partida. |
 | `SecretosRegressionTest` | La protección de secretos, las búsquedas de las máquinas, ambos órdenes de la segunda fase y partidas entre máquinas. |
+| `Funcionalidades.EstrategiasPartidaRegressionTest` | Los límites de riesgo, los descartes heredados, las preguntas adaptativas, los desempates, una acción por turno y la segunda fase con 14/15 descartes, rechazo del desafío y derrota inicial. |
+| `Funcionalidades.DiagnosticoMaquinasRegressionTest` | La selección equilibrada en 22.000 tableros, incluidos casos de pelo rubio con división 5/18, y el registro de comparación de preguntas, desempates y riesgo de ambas máquinas. |
 
 Cada programa muestra un mensaje `PASS` si termina correctamente. Una condición
 incumplida produce un error de prueba.
@@ -112,4 +116,10 @@ incumplida produce un error de prueba.
 - El jugador no puede repetir la misma pregunta dentro de una fase. Las entradas rechazadas no consumen turno.
 - Las preguntas vuelven a estar disponibles al comenzar otra fase o una nueva partida.
 - Los secretos de las máquinas son distintos, también entre fases. En la segunda fase, el jugador tiene 22 candidatos porque se excluye el secreto de la máquina anterior. La siguiente máquina hereda una copia independiente de los candidatos restantes de la primera.
-- Máquina 2 contempla las cuatro opciones de pelo. Las estrategias de preguntas adaptativas, los porcentajes de riesgo y el umbral de descartes para habilitar la segunda fase quedan pendientes.
+- La segunda fase se ofrece únicamente si el humano gana y la máquina derrotada descartó menos de 15 personajes. Con 15 o más, la partida finaliza con la victoria de la primera fase.
+- Cada máquina calcula sus descartes como cantidad del mazo menos candidatos vivos. Cuentan las preguntas, los intentos fallidos y los descartes heredados.
+- Máquina 1 arriesga con una probabilidad de `min(100%, 4% + 5 puntos porcentuales por descarte)`; Máquina 2 usa `min(100%, 4% + 2,5 puntos porcentuales por descarte)`. Es la probabilidad de decidir arriesgar, no la de acertar. La segunda máquina aplica su propia fórmula al tablero heredado.
+- Si no arriesga, Máquina 1 elige la pregunta más desbalanceada y Máquina 2 la más equilibrada. Se cuentan las respuestas sí/no sobre los candidatos vivos y se compara su diferencia absoluta: la primera maximiza esa diferencia y la segunda la minimiza. Se ignoran preguntas constantes y los empates se resuelven al azar.
+- Al arriesgar, todos los candidatos vivos tienen la misma probabilidad de ser elegidos. Un intento fallido descarta únicamente al personaje elegido.
+- Con un único candidato, la máquina lo arriesga obligatoriamente; si no hay preguntas útiles, también debe arriesgar. Preguntar y arriesgar consumen turnos separados, incluso cuando una pregunta deja un solo candidato.
+- El registro de ambas máquinas explica el cálculo de riesgo y la decisión de preguntar o arriesgar. Al preguntar, muestra la división sí/no de cada pregunta, las preguntas constantes que ignora, la mejor diferencia, los desempates y cuántos personajes descartaría con cada respuesta. Al arriesgar, explica la elección aleatoria entre candidatos vivos. Las decisiones consultan al árbitro sin recibir el personaje secreto rival.
