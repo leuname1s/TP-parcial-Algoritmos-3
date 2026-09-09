@@ -13,6 +13,7 @@ public class MazoPersonajes implements IMazoPersonajes {
     private static final int COMBINACIONES = Genero.values().length * ColorPelo.values().length * 8;
 
     private Nodo cabeza;
+    private Nodo cola;
     private Personaje[] indicePorId = new Personaje[1];
     private final int capacidad;
     private final Personaje[] duenoDeCombinacion = new Personaje[COMBINACIONES];
@@ -48,12 +49,20 @@ public class MazoPersonajes implements IMazoPersonajes {
         if (p.getId() >= indicePorId.length) {
             indicePorId = Arrays.copyOf(indicePorId, p.getId() + 1);
         }
-        insertarOrdenado(p);
+        Nodo nuevo = new Nodo(p);
+        if (cola == null) {
+            cabeza = nuevo;
+        } else {
+            cola.siguiente = nuevo;
+        }
+        cola = nuevo;
         indicePorId[p.getId()] = p;
         cantidad++;
         duenoDeCombinacion[codigo] = p;
     }
 
+    // Cada atributo ocupa una posición según su cantidad de valores posibles;
+    // así, cada perfil tiene un índice único para detectar combinaciones repetidas.
     private static int codigoDe(Personaje p) {
         int codigo = p.getGenero().getOrden();
         codigo = codigo * ColorPelo.values().length + p.getColorPelo().ordinal();
@@ -68,20 +77,63 @@ public class MazoPersonajes implements IMazoPersonajes {
         return indicePorId.length - 1;
     }
 
-    private void insertarOrdenado(Personaje p) {
-        Nodo nuevo = new Nodo(p);
-        int ordenNuevo = p.getGenero().getOrden();
-        if (cabeza == null || ordenNuevo < cabeza.dato.getGenero().getOrden()) {
-            nuevo.siguiente = cabeza;
-            cabeza = nuevo;
-            return;
+    /**
+     * Ordena por genero con MergeSort estable, sin cambiar personajes ni IDs.
+     * Reenlaza nodos en O(n log n), con O(log n) de pila recursiva.
+     * Debe ejecutarse al terminar la carga y antes de iniciar un recorrido.
+     */
+    @Override
+    public void ordenarPorGenero() {
+        cabeza = mergeSort(cabeza);
+        cola = cabeza;
+        while (cola != null && cola.siguiente != null) {
+            cola = cola.siguiente;
         }
-        Nodo actual = cabeza;
-        while (actual.siguiente != null && actual.siguiente.dato.getGenero().getOrden() <= ordenNuevo) {
-            actual = actual.siguiente;
+    }
+
+    private static Nodo mergeSort(Nodo inicio) {
+        if (inicio == null || inicio.siguiente == null) {
+            return inicio;
         }
-        nuevo.siguiente = actual.siguiente;
-        actual.siguiente = nuevo;
+        // La referencia rápida avanza de a dos: cuando termina, la lenta marca el corte.
+        Nodo lento = inicio;
+        Nodo rapido = inicio.siguiente;
+        while (rapido != null && rapido.siguiente != null) {
+            lento = lento.siguiente;
+            rapido = rapido.siguiente.siguiente;
+        }
+        Nodo derecha = lento.siguiente;
+        lento.siguiente = null;
+        return mezclar(mergeSort(inicio), mergeSort(derecha));
+    }
+
+    private static Nodo mezclar(Nodo izquierda, Nodo derecha) {
+        Nodo inicio = null;
+        Nodo ultimo = null;
+        while (izquierda != null && derecha != null) {
+            Nodo elegido;
+            // Elegir la izquierda en empates conserva el orden de carga.
+            if (izquierda.dato.getGenero().getOrden() <= derecha.dato.getGenero().getOrden()) {
+                elegido = izquierda;
+                izquierda = izquierda.siguiente;
+            } else {
+                elegido = derecha;
+                derecha = derecha.siguiente;
+            }
+            if (ultimo == null) {
+                inicio = elegido;
+            } else {
+                ultimo.siguiente = elegido;
+            }
+            ultimo = elegido;
+        }
+        // La mitad que queda ya está ordenada y se enlaza completa.
+        Nodo resto = izquierda != null ? izquierda : derecha;
+        if (ultimo == null) {
+            return resto;
+        }
+        ultimo.siguiente = resto;
+        return inicio;
     }
 
     @Override

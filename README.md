@@ -3,7 +3,7 @@
 Juego de consola en Java con un catálogo de 36 personajes. Cada partida selecciona
 23 personajes al azar, sin repetición, y conserva sus ID originales y el mismo
 mazo durante ambas fases. Los personajes se almacenan en una lista enlazada
-ordenada por género.
+ordenada por género mediante MergeSort estable al preparar el mazo.
 
 ## Estructura actual del proyecto
 
@@ -14,6 +14,7 @@ source/                  Código fuente del juego (.java)
     datos/               Personajes, mazo, nodos y enumeraciones
     Funcionalidades/     Menú, partida, máquinas y tableros de candidatos
     Interfaces/          Contratos que implementan las clases
+docs/                    Informe técnico en progreso y bitácora
 tests/                   Código fuente de las pruebas automatizadas (.java)
 build/                   Archivos compilados del juego y las pruebas (.class)
 README.md                Descripción e instrucciones del proyecto
@@ -27,7 +28,7 @@ README.md                Descripción e instrucciones del proyecto
 | `source/datos` | `Personaje` contiene los atributos de un personaje. `MazoPersonajes` administra la colección con una lista enlazada e índice por ID; también se reutiliza con capacidad 36 para construir el catálogo. `Nodo` es un elemento de esa lista. `Genero`, `ColorPelo` y `ModoJuego` enumeran las opciones disponibles. `Pregunta` define las preguntas y cómo evaluar cada una. |
 | `source/Funcionalidades` | `MenuConsola` permite elegir el modo de juego. `Partida` coordina la selección de secretos, los turnos y las fases. `Maquina1` y `Maquina2` usan `EstrategiaMaquina` para compartir los cálculos y la ejecución del turno con comportamientos diferentes. `TableroCandidatos` lleva los descartes de cada participante. Actualmente la entrada y salida por consola también están dentro de estas clases. |
 | `source/Interfaces` | Define los métodos que deben ofrecer las implementaciones, por ejemplo `IPartida`, `IMaquina` e `ITableroCandidatos`. `IArbitroTurno` permite a las máquinas consultar respuestas y comprobar intentos sin recibir el personaje secreto rival. Estas interfaces son contratos de Java, no pantallas gráficas. |
-| `tests` | Contiene cinco programas de prueba que verifican personajes y mazos, entradas del jugador, protección de secretos, estrategias, segunda fase y registro de decisiones. Se ejecutan por separado del juego. |
+| `tests` | Contiene seis programas de prueba que verifican personajes y mazos, entradas del jugador, protección de secretos, estrategias, segunda fase y registro de decisiones. Se ejecutan por separado del juego. |
 
 Al ejecutar el juego, `Main` abre `MenuConsola`. El menú crea una `Partida`, que
 obtiene un mazo de `CatalogoPersonajes` y prepara los tableros y las máquinas.
@@ -38,33 +39,6 @@ El **catálogo** contiene todos los personajes definidos; el **mazo** contiene l
 23 elegidos para esa partida; cada **tablero** registra cuáles de esos personajes
 siguen siendo candidatos para un participante. Los descartes no eliminan
 personajes del catálogo ni del mazo.
-
-## Qué es la carpeta build
-
-`build` es la carpeta de salida de la compilación. Se creó al compilar y comprobar
-el juego. El compilador `javac` transforma los archivos `.java` de `source` y
-`tests` en archivos `.class`, que contienen las instrucciones que ejecuta la
-máquina virtual de Java.
-
-Por ejemplo:
-
-```text
-source/main/Main.java  --compilación-->  build/main/Main.class
-```
-
-Las subcarpetas de `build` reflejan los paquetes de Java. También pueden aparecer
-archivos como `Pregunta$1.class`: son clases adicionales que genera el compilador
-para implementaciones internas del código.
-
-- Los cambios se hacen en los archivos `.java` de `source` o `tests`.
-- Los archivos de `build` se generan al compilar; no se editan manualmente.
-- Después de cambiar el código, hay que volver a compilar para ejecutar la versión actualizada.
-- Si se elimina `build`, el código fuente se conserva. Hay que compilar nuevamente antes de ejecutar el juego o las pruebas.
-- Los archivos `.class` están excluidos de Git mediante la regla `*.class` del `.gitignore`.
-
-El nombre `build` es una elección del proyecto: en los comandos de abajo,
-`-d build` indica dónde guardar el resultado de la compilación y `-cp build`
-indica dónde buscar las clases para ejecutarlas.
 
 ## Compilar y ejecutar
 
@@ -89,6 +63,7 @@ fuente del juego y las pruebas, los compilan y abren el menú principal.
 Después de compilar, ejecutar:
 
 ```powershell
+java -cp build OrdenamientoMazoRegressionTest
 java -cp build PersonajesMazoRegressionTest
 java -cp build EntradaJugadorRegressionTest
 java -cp build SecretosRegressionTest
@@ -98,6 +73,7 @@ java -cp build Funcionalidades.DiagnosticoMaquinasRegressionTest
 
 | Prueba | Qué verifica |
 |---|---|
+| `OrdenamientoMazoRegressionTest` | Orden y estabilidad, listas de 0 a 36 elementos, identidad e ID, ordenamiento repetido, agregado posterior y preparación de 100 mazos reproducibles. |
 | `PersonajesMazoRegressionTest` | Los 36 perfiles distinguibles, el sorteo de mazos, los ID no consecutivos, los filtros y la independencia de los tableros. |
 | `EntradaJugadorRegressionTest` | El rechazo de preguntas repetidas y de ID ausentes o descartados, el menú cuando se agotan las preguntas y el reinicio de partida. |
 | `SecretosRegressionTest` | La protección de secretos, las búsquedas de las máquinas, ambos órdenes de la segunda fase y partidas entre máquinas. |
@@ -123,3 +99,24 @@ incumplida produce un error de prueba.
 - Al arriesgar, todos los candidatos vivos tienen la misma probabilidad de ser elegidos. Un intento fallido descarta únicamente al personaje elegido.
 - Con un único candidato, la máquina lo arriesga obligatoriamente; si no hay preguntas útiles, también debe arriesgar. Preguntar y arriesgar consumen turnos separados, incluso cuando una pregunta deja un solo candidato.
 - El registro de ambas máquinas explica el cálculo de riesgo y la decisión de preguntar o arriesgar. Al preguntar, muestra la división sí/no de cada pregunta, las preguntas constantes que ignora, la mejor diferencia, los desempates y cuántos personajes descartaría con cada respuesta. Al arriesgar, explica la elección aleatoria entre candidatos vivos. Las decisiones consultan al árbitro sin recibir el personaje secreto rival.
+
+## Ordenamiento inicial y documentación técnica
+
+`MazoPersonajes.agregar` conserva el orden de carga y enlaza cada nodo al final.
+`CatalogoPersonajes.crearMazo` mezcla los 36 personajes con Fisher–Yates, carga
+los primeros 23 y llama una vez a `ordenarPorGenero` antes de devolver el mazo.
+MergeSort divide la lista, ordena ambas mitades y las combina por género:
+femenino primero, masculino después. Ante géneros iguales conserva el orden
+del sorteo. No cambia los personajes, sus ID ni el índice de búsqueda.
+
+El ordenamiento cuesta `O(n log n)` y usa `O(log n)` de pila recursiva, con
+mezcla iterativa y reutilización de nodos. Enlazar cada nodo al final cuesta
+`O(1)`; el costo de ampliar el índice por ID se analiza por separado.
+Una lista vacía o de un elemento es un caso base. Si se agregan personajes
+posteriormente, hay que volver a ordenar antes de recorrerla por género.
+
+El [informe técnico en progreso](docs/technical-report.md) registra la decisión,
+las estructuras, los contratos y las complejidades de este paso. La
+[bitácora](docs/development-log.md) registra el trabajo y el uso de herramientas.
+La comparación experimental con un algoritmo cuadrático corresponde al paso 2;
+no se afirma una ventaja de tiempo para solo 23 personajes sin medirla.

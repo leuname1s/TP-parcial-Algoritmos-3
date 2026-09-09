@@ -81,7 +81,8 @@ public final class CatalogoPersonajes implements ICatalogoPersonajes {
         for (Personaje p : catalogo) {
             personajes[posicion++] = p;
         }
-        // Fisher-Yates samples without replacement while preserving character IDs.
+        // Fisher–Yates fija una posición por paso, intercambiándola con una al azar
+        // del tramo pendiente. Tomar los primeros 23 evita repeticiones y conserva los ID.
         for (int i = personajes.length - 1; i > 0; i--) {
             int j = random.nextInt(i + 1);
             Personaje temporal = personajes[i];
@@ -92,6 +93,7 @@ public final class CatalogoPersonajes implements ICatalogoPersonajes {
         for (int i = 0; i < MazoPersonajes.TOTAL; i++) {
             mazo.agregar(personajes[i]);
         }
+        mazo.ordenarPorGenero();
         return mazo;
     }
 }

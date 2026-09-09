@@ -30,6 +30,8 @@ enum EstrategiaMaquina {
         return seleccionarPregunta(tablero, random, mensaje -> {});
     }
 
+    // Compara la división inmediata de candidatos: minimiza o maximiza la diferencia
+    // según la estrategia y reúne todos los empates para elegir sin favorecer el orden.
     private Pregunta seleccionarPregunta(TableroCandidatos tablero, Random random, Consumer<String> registrar) {
         List<Pregunta> mejores = new ArrayList<>();
         int mejorDiferencia = buscaEquilibrio ? Integer.MAX_VALUE : -1;
@@ -75,7 +77,7 @@ enum EstrategiaMaquina {
             throw new IllegalStateException("La máquina no tiene candidatos para continuar");
         }
 
-        // Count inherited knowledge against the original deck, not the phase's initial board.
+        // Comparar con el mazo original incluye los descartes heredados en el riesgo.
         int descartados = mazo.getCantidad() - cantidad;
         double porcentaje = porcentajeRiesgo(descartados);
         System.out.println("[" + nombre + "] Candidatos: " + cantidad + "; descartados: "
@@ -110,6 +112,7 @@ enum EstrategiaMaquina {
                 int eliminados = tablero.descartarSegun(pregunta, respuesta);
                 System.out.println("[" + nombre + "] Descartó " + eliminados
                         + " candidatos. Le quedan " + tablero.getCantidadViva() + " candidatos.");
+                // Preguntar termina el turno, aunque haya quedado un solo candidato.
                 return false;
             }
             System.out.println("[" + nombre + "] No hay preguntas útiles: debe arriesgar.");

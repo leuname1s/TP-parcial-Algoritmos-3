@@ -62,7 +62,7 @@ public class Partida implements IPartida {
         System.out.println("==========================================");
         System.out.println("Modo seleccionado: " + modo.getDescripcion());
 
-        // Keep the sampled deck throughout both phases.
+        // El mismo mazo sorteado se conserva durante las dos fases.
         this.mazo = CatalogoPersonajes.crearMazo(random);
 
         if (modo == ModoJuego.JUGADOR_VS_MAQUINA_1) {
@@ -185,7 +185,7 @@ public class Partida implements IPartida {
 
         boolean ganoJugadorFase1 = ejecutarBuclePartida(maquinaEnemigaInicial, objetivoEnemigoInicial);
 
-        // Only a first-phase victory can unlock the optional challenge.
+        // Solo una victoria en la primera fase habilita evaluar el desafío opcional.
         if (ganoJugadorFase1) {
             boolean quiereContinuar = ofrecerDesafioSegundaMaquina(maquinaEnemigaInicial);
             if (quiereContinuar) {
@@ -225,6 +225,8 @@ public class Partida implements IPartida {
         }
     }
 
+    // La nueva máquina copia los candidatos heredados y busca al mismo personaje humano;
+    // el jugador reinicia sus candidatos porque debe descubrir un secreto distinto.
     private void iniciarYJugarFase2(IMaquina maquinaPrimera) {
         TableroCandidatos tableroHeredado = (TableroCandidatos) maquinaPrimera.getTablero();
         IMaquina segundaMaquina;
@@ -243,7 +245,7 @@ public class Partida implements IPartida {
             nuevoObjetivo = this.objetivoMaquina1;
         }
 
-        // The previous machine's secret cannot be selected again.
+        // El secreto anterior queda excluido del sorteo y del nuevo tablero del jugador.
         this.tableroJugador = new TableroCandidatos(mazo);
         this.tableroJugador.descartar(objetivoAnterior.getId());
         this.preguntasJugador.clear();
@@ -298,6 +300,7 @@ public class Partida implements IPartida {
     }
 
     private boolean ejecutarTurnoMaquina(IMaquina maquina, final Personaje objetivoEnemigo) {
+        // El árbitro responde y comprueba intentos sin entregar el secreto a la máquina.
         return maquina.ejecutarTurno(new IArbitroTurno() {
             @Override
             public boolean responder(Pregunta pregunta) {

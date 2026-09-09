@@ -14,6 +14,7 @@ public class TableroCandidatos implements ITableroCandidatos {
 
     public TableroCandidatos(MazoPersonajes mazo) {
         this.mazo = mazo;
+        // Se indexa por ID original, no por posición: los ID ausentes quedan en false.
         this.vivo = new boolean[mazo.getMaxId() + 1];
         for (Personaje p : mazo) {
             vivo[p.getId()] = true;
@@ -21,7 +22,7 @@ public class TableroCandidatos implements ITableroCandidatos {
         this.cantidadViva = mazo.getCantidad();
     }
 
-    // Constructor de copia para heredar el estado de un tablero preexistente
+    // Comparte el mazo, pero copia los descartes para que cada tablero evolucione por separado.
     public TableroCandidatos(TableroCandidatos original) {
         this.mazo = original.mazo;
         this.vivo = original.vivo.clone();

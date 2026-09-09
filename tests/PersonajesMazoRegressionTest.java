@@ -83,6 +83,8 @@ public class PersonajesMazoRegressionTest {
                 Genero.MASCULINO, ColorPelo.PELADO, false, false, true)));
         check(deck.getCantidad() == 1, "Rejected insertion changed deck");
         deck.agregar(female);
+        check(deck.iterator().next() == male, "El agregado debe conservar el orden de carga");
+        deck.ordenarPorGenero();
         check(deck.iterator().next() == female && deck.buscarPorId(36) == male,
                 "Insertion changed ID or gender order");
         check(deck.buscarPorId(1) == null && deck.buscarPorId(37) == null, "Invalid lookup");
