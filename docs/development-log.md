@@ -47,3 +47,22 @@ código deben mantenerse en español en los pasos siguientes.
 Próximo paso: comparación experimental con un ordenamiento cuadrático, usando los
 mismos 23 personajes en el mismo orden inicial. Todavía no se presentan resultados
 de mediciones.
+
+## 2026-09-10 - Paso 3: resultados y persistencia
+
+Alcance aprobado por el usuario: resultado final único, estadísticas por usuario,
+archivo local, partidas totales y marcador global con victorias de cada máquina.
+El usuario decidió omitir el paso 2. Captura de nombre y marcador visual siguen
+previstos para Swing, sin agregar pantallas de consola.
+
+Implementación asistida por Codex: resultado inmutable con identificador, retorno
+del ganador de fase 2, servicio de registro y consulta, contrato de repositorio y
+archivo Properties UTF-8 con reemplazo atómico. Se conservan entradas por partida
+para deduplicar incluso después de recargar; los totales se calculan del registro.
+La carpeta data queda excluida de Git. No se agregaron dependencias.
+
+Verificación: compilación con UTF-8 y -Xlint:all; seis regresiones existentes y dos
+nuevas pruebas de estadísticas y resultados. Cobertura de ambos órdenes de fase,
+derrota en segunda fase, ganadores de máquinas, reinicio, nombres con acentos,
+recarga, duplicados, archivo inválido y reintento tras fallo simulado de guardado.
+Herramientas: PowerShell, apply_patch, javac, java y lectura del historial de la tarea.

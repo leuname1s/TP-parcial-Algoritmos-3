@@ -120,3 +120,56 @@ las estructuras, los contratos y las complejidades de este paso. La
 [bitácora](docs/development-log.md) registra el trabajo y el uso de herramientas.
 La comparación experimental con un algoritmo cuadrático corresponde al paso 2;
 no se afirma una ventaja de tiempo para solo 23 personajes sin medirla.
+
+## Resultados y estadísticas (paso 3)
+
+Cada partida terminada conserva un `ResultadoPartida` inmutable, accesible por
+`IPartida.getResultado()`. Antes de terminar devuelve `null`. Iniciar otra partida
+borra el resultado anterior y genera otro identificador; volver a llamar `jugar`
+sobre una partida terminada no vuelve a ejecutarla.
+
+| Desenlace humano | Partidas totales | Victorias | Victorias verdaderas |
+|---|---:|---:|---:|
+| Pierde la primera o la segunda fase | +1 | +0 | +0 |
+| Gana la primera y termina (rechazo o 15 o más descartes) | +1 | +1 | +0 |
+| Gana ambas fases | +1 | +1 | +1 |
+
+El marcador global de máquinas contabiliza por separado partidas totales,
+victorias de Máquina 1 y victorias de Máquina 2. No afecta a usuarios humanos.
+Las partidas incompletas no tienen resultado registrable.
+
+`ServicioEstadisticas` registra resultados y permite consultar usuarios o máquinas.
+`RepositorioEstadisticasArchivo` usa `data/estadisticas.properties` por defecto;
+su constructor acepta otra ruta. Solo requiere la biblioteca estándar de Java.
+Los nombres se recortan en los extremos, no pueden estar vacíos y distinguen
+mayúsculas. No hay autenticación de usuarios.
+
+El archivo UTF-8 conserva una entrada por identificador de partida y los contadores
+se calculan al consultar. Un registro idéntico devuelve `false` sin incrementar;
+el mismo identificador con otro usuario o desenlace se rechaza. La protección
+persiste al cerrar y abrir el programa. Un archivo ausente representa un registro
+nuevo; datos inválidos o vacíos generan un error y se conservan. El guardado usa
+un temporal y reemplazo atómico: si el sistema no lo admite, informa el fallo.
+El resultado sigue disponible para reintentar. Se admite una instancia local;
+no hay coordinación de escrituras entre procesos.
+
+La conexión del servicio al menú, la captura de usuario y la presentación del
+marcador quedan para Swing. **La consola actual produce el resultado, pero no
+lo guarda automáticamente.** El servicio se puede usar así después de terminar:
+
+```java
+ServicioEstadisticas servicio = new ServicioEstadisticas(new RepositorioEstadisticasArchivo());
+servicio.registrar("Ana", partida.getResultado());
+Estadisticas marcador = servicio.consultarUsuario("Ana");
+// Para modo máquina contra máquina: registrar(null, resultado) y consultarMaquinas().
+```
+
+Después de compilar, ejecutar también:
+
+```powershell
+java -cp build EstadisticasRegressionTest
+java -cp build ResultadosRegressionTest
+```
+
+El paso 2 (comparación experimental y evidencia algorítmica) fue omitido por
+pedido del usuario. No se realizaron mediciones de rendimiento.

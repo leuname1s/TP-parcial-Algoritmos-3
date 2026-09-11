@@ -177,6 +177,12 @@ public class EstrategiasPartidaRegressionTest {
         String log = output.toString("UTF-8");
         check(log.contains("¿Deseas continuar") == eligible, "Wrong phase eligibility at " + discarded);
         check(log.contains("INICIANDO FASE 2") == (eligible && accept), "Wrong phase transition");
+        check(game.getResultado().getDesenlace() == (eligible && accept
+                ? datos.ResultadoPartida.Desenlace.VICTORIA_VERDADERA
+                : datos.ResultadoPartida.Desenlace.VICTORIA), "Resultado final incorrecto");
+        datos.ResultadoPartida resultado = game.getResultado();
+        game.jugar();
+        check(game.getResultado() == resultado, "Se volvió a jugar una partida terminada");
         check(scanner.nextLine().equals("sentinel"), "Unexpected prompt consumed another input");
         if (eligible && accept) {
             ITableroCandidatos second = mode == ModoJuego.JUGADOR_VS_MAQUINA_1
@@ -218,6 +224,8 @@ public class EstrategiasPartidaRegressionTest {
         String log = output.toString("UTF-8");
         check(log.contains("HA ADIVINADO") && !log.contains("¿Deseas continuar")
                 && !log.contains("INICIANDO FASE 2"), "Loss offered a second phase");
+        check(game.getResultado().getDesenlace() == datos.ResultadoPartida.Desenlace.DERROTA,
+                "La derrota inicial no se conservó");
         check(scanner.nextLine().equals("sentinel"), "Loss consumed unexpected input");
     }
 

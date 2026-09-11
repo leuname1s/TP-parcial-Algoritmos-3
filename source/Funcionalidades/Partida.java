@@ -1,6 +1,9 @@
 package Funcionalidades;
 
 import datos.MazoPersonajes;
+import datos.ResultadoPartida;
+import datos.ResultadoPartida.Desenlace;
+import java.util.UUID;
 import defaults.CatalogoPersonajes;
 
 import datos.ModoJuego;
@@ -18,6 +21,15 @@ import java.util.Random;
 import java.util.Scanner;
 
 public class Partida implements IPartida {
+    private UUID idPartida;
+    private ResultadoPartida resultado;
+
+    @Override
+    public ResultadoPartida getResultado() { return resultado; }
+
+    private void finalizar(Desenlace desenlace) {
+        resultado = new ResultadoPartida(idPartida, modoActual, desenlace);
+    }
 
     private final Scanner scanner;
     private final Random random;
@@ -49,6 +61,11 @@ public class Partida implements IPartida {
 
     @Override
     public void iniciar(ModoJuego modo) {
+        if (modo == null || modo == ModoJuego.SALIR) {
+            throw new IllegalArgumentException("Modo de partida inválido");
+        }
+        this.idPartida = UUID.randomUUID();
+        this.resultado = null;
         this.modoActual = modo;
         this.personajeJugador = null;
         this.objetivoMaquina1 = null;
@@ -174,6 +191,8 @@ public class Partida implements IPartida {
 
     @Override
     public void jugar() {
+        if (idPartida == null) { throw new IllegalStateException("Primero debe iniciar la partida"); }
+        if (resultado != null) { return; }
         if (modoActual == ModoJuego.MAQUINA_1_VS_MAQUINA_2) {
             jugarMaquinaVsMaquina();
             return;
@@ -189,8 +208,14 @@ public class Partida implements IPartida {
         if (ganoJugadorFase1) {
             boolean quiereContinuar = ofrecerDesafioSegundaMaquina(maquinaEnemigaInicial);
             if (quiereContinuar) {
-                iniciarYJugarFase2(maquinaEnemigaInicial);
+                boolean ganoFase2 = iniciarYJugarFase2(maquinaEnemigaInicial);
+                finalizar(ganoFase2 ? Desenlace.VICTORIA_VERDADERA
+                        : Desenlace.DERROTA);
+            } else {
+                finalizar(Desenlace.VICTORIA);
             }
+        } else {
+            finalizar(Desenlace.DERROTA);
         }
     }
 
@@ -227,7 +252,7 @@ public class Partida implements IPartida {
 
     // La nueva máquina copia los candidatos heredados y busca al mismo personaje humano;
     // el jugador reinicia sus candidatos porque debe descubrir un secreto distinto.
-    private void iniciarYJugarFase2(IMaquina maquinaPrimera) {
+    private boolean iniciarYJugarFase2(IMaquina maquinaPrimera) {
         TableroCandidatos tableroHeredado = (TableroCandidatos) maquinaPrimera.getTablero();
         IMaquina segundaMaquina;
         Personaje nuevoObjetivo;
@@ -264,7 +289,7 @@ public class Partida implements IPartida {
         System.out.println("- " + segundaMaquina.getNombre() + " ha recibido un nuevo personaje objetivo secreto.");
         System.out.println("==========================================\n");
 
-        ejecutarBuclePartida(segundaMaquina, nuevoObjetivo);
+        return ejecutarBuclePartida(segundaMaquina, nuevoObjetivo);
     }
 
     private boolean ejecutarBuclePartida(IMaquina maquinaEnemiga, Personaje objetivoEnemigo) {
@@ -453,12 +478,14 @@ public class Partida implements IPartida {
             // Turno de Máquina 1 buscando a objetivoMaquina2
             finDeJuego = ejecutarTurnoMaquina(maquina1, objetivoMaquina2);
             if (finDeJuego) {
+                finalizar(Desenlace.GANA_MAQUINA_1);
                 break;
             }
 
             // Turno de Máquina 2 buscando a objetivoMaquina1
             finDeJuego = ejecutarTurnoMaquina(maquina2, objetivoMaquina1);
             if (finDeJuego) {
+                finalizar(Desenlace.GANA_MAQUINA_2);
                 break;
             }
 

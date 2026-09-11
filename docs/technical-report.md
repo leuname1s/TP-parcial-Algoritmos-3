@@ -90,3 +90,31 @@ el comportamiento existente del juego.
 - Conciliar README, documento de diseño y planilla al preparar la entrega.
 
 No atribuir autoría al equipo ni afirmar mediciones que no estén registradas.
+
+## Paso 3: resultado y persistencia
+
+`Partida` conserva un resultado definitivo con UUID, modo y desenlace; la segunda
+fase ahora devuelve su ganador. Ganar ambas fases suma una victoria verdadera
+incluida en las victorias; perder la segunda deja una derrota final. Una partida
+completa cuenta una sola vez aunque tenga dos fases.
+
+`ServicioEstadisticas` aplica la contabilización y depende del contrato
+`IRepositorioEstadisticas`. La implementación de archivo usa Properties y UTF-8,
+con una entrada por UUID (modo, desenlace y usuario). Los contadores se derivan
+del registro, evitando mantener dos representaciones persistidas del mismo total.
+El separador se interpreta solo dos veces, por lo que también admite nombres que
+contienen `|`. Los marcadores humanos y de máquinas se consultan por separado.
+
+La carga valida versión, identificadores, nombres y compatibilidad entre modo y
+resultado antes de permitir una escritura. Un duplicado idéntico no vuelve a
+contar; un duplicado contradictorio se rechaza. El guardado reemplaza el archivo
+atómicamente y propaga errores, conservando el resultado para reintentar.
+No se resuelve concurrencia entre procesos ni recuperación de partidas en curso.
+El registro crece con las partidas: carga, consulta y guardado cuestan O(r) en
+cantidad de registros (y espacio proporcional al tamaño del archivo).
+
+La integración visual y la captura de usuario quedan para Swing. La consola no
+invoca automáticamente el servicio. Las pruebas ejercitan directamente la API.
+
+Paso 2: omitido por decisión del usuario; los pendientes de comparación experimental
+anteriores quedan fuera del alcance actual, sin mediciones ni afirmaciones nuevas.
