@@ -1,7 +1,9 @@
 package Interfaces;
 
+import datos.ResultadoTurno;
+
 public interface IMaquina {
     String getNombre();
-    boolean ejecutarTurno(IArbitroTurno arbitro);
+    ResultadoTurno ejecutarTurno(IArbitroTurno arbitro);
     ITableroCandidatos getTablero();
 }

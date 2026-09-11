@@ -2,7 +2,6 @@ package Funcionalidades;
 
 import datos.ModoJuego;
 import Interfaces.IMenu;
-import Interfaces.IPartida;
 
 import java.util.Scanner;
 
@@ -36,6 +35,7 @@ public class MenuConsola implements IMenu {
     public ModoJuego seleccionarModo() {
         while (true) {
             mostrar();
+            if (!scanner.hasNextLine()) { return ModoJuego.SALIR; }
             String entrada = scanner.nextLine().trim();
             try {
                 int opcion = Integer.parseInt(entrada);
@@ -70,8 +70,6 @@ public class MenuConsola implements IMenu {
     }
 
     private void iniciarModo(ModoJuego modo) {
-        IPartida partida = new Partida(scanner);
-        partida.iniciar(modo);
-        partida.jugar();
+        new PartidaConsola(scanner).jugar(modo);
     }
 }

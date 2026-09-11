@@ -26,14 +26,14 @@ README.md                Descripción e instrucciones del proyecto
 | `source/main` | `Main` inicia el programa y abre el menú de consola. |
 | `source/defaults` | `CatalogoPersonajes` define los 36 personajes, asigna sus ID en orden de incorporación y sortea los 23 de cada partida. |
 | `source/datos` | `Personaje` contiene los atributos de un personaje. `MazoPersonajes` administra la colección con una lista enlazada e índice por ID; también se reutiliza con capacidad 36 para construir el catálogo. `Nodo` es un elemento de esa lista. `Genero`, `ColorPelo` y `ModoJuego` enumeran las opciones disponibles. `Pregunta` define las preguntas y cómo evaluar cada una. |
-| `source/Funcionalidades` | `MenuConsola` permite elegir el modo de juego. `Partida` coordina la selección de secretos, los turnos y las fases. `Maquina1` y `Maquina2` usan `EstrategiaMaquina` para compartir los cálculos y la ejecución del turno con comportamientos diferentes. `TableroCandidatos` lleva los descartes de cada participante. Actualmente la entrada y salida por consola también están dentro de estas clases. |
+| `source/Funcionalidades` | `MenuConsola` permite elegir el modo de juego. `Partida` coordina la selección de secretos, los turnos y las fases. `Maquina1` y `Maquina2` usan `EstrategiaMaquina` para compartir los cálculos y la ejecución del turno con comportamientos diferentes. `TableroCandidatos` lleva los descartes de cada participante. `PartidaConsola` concentra la interacción de la partida por consola; el motor y las estrategias no leen ni imprimen. |
 | `source/Interfaces` | Define los métodos que deben ofrecer las implementaciones, por ejemplo `IPartida`, `IMaquina` e `ITableroCandidatos`. `IArbitroTurno` permite a las máquinas consultar respuestas y comprobar intentos sin recibir el personaje secreto rival. Estas interfaces son contratos de Java, no pantallas gráficas. |
-| `tests` | Contiene seis programas de prueba que verifican personajes y mazos, entradas del jugador, protección de secretos, estrategias, segunda fase y registro de decisiones. Se ejecutan por separado del juego. |
+| `tests` | Contiene nueve programas de prueba que verifican personajes y mazos, entradas del jugador, protección de secretos, estrategias, segunda fase y registro de decisiones. Se ejecutan por separado del juego. |
 
-Al ejecutar el juego, `Main` abre `MenuConsola`. El menú crea una `Partida`, que
-obtiene un mazo de `CatalogoPersonajes` y prepara los tableros y las máquinas.
-Durante los turnos, las respuestas a las preguntas permiten descartar candidatos
-en el tablero correspondiente.
+Al ejecutar el juego, `Main` abre `MenuConsola`. El menú crea un adaptador
+`PartidaConsola`, que solicita acciones al motor `Partida`. El motor obtiene
+el mazo de `CatalogoPersonajes`, controla turnos y fases y devuelve los resultados
+que la consola presenta. Las preguntas filtran el tablero correspondiente.
 
 El **catálogo** contiene todos los personajes definidos; el **mazo** contiene los
 23 elegidos para esa partida; cada **tablero** registra cuáles de esos personajes
@@ -69,6 +69,9 @@ java -cp build EntradaJugadorRegressionTest
 java -cp build SecretosRegressionTest
 java -cp build Funcionalidades.EstrategiasPartidaRegressionTest
 java -cp build Funcionalidades.DiagnosticoMaquinasRegressionTest
+java -cp build EstadisticasRegressionTest
+java -cp build ResultadosRegressionTest
+java -cp build MotorPartidaRegressionTest
 ```
 
 | Prueba | Qué verifica |
@@ -79,6 +82,9 @@ java -cp build Funcionalidades.DiagnosticoMaquinasRegressionTest
 | `SecretosRegressionTest` | La protección de secretos, las búsquedas de las máquinas, ambos órdenes de la segunda fase y partidas entre máquinas. |
 | `Funcionalidades.EstrategiasPartidaRegressionTest` | Los límites de riesgo, los descartes heredados, las preguntas adaptativas, los desempates, una acción por turno y la segunda fase con 14/15 descartes, rechazo del desafío y derrota inicial. |
 | `Funcionalidades.DiagnosticoMaquinasRegressionTest` | La selección equilibrada en 22.000 tableros, incluidos casos de pelo rubio con división 5/18, y el registro de comparación de preguntas, desempates y riesgo de ambas máquinas. |
+| `EstadisticasRegressionTest` | Registro, UTF-8, recarga, duplicados, datos inválidos y reintento de guardado. |
+| `ResultadosRegressionTest` | Derrota en segunda fase, ambos ganadores de máquinas, resultado estable y nuevo UUID al reiniciar. |
+| `MotorPartidaRegressionTest` | Ausencia de entrada/salida en el motor, orden de acciones, consultas inmutables y rechazos sin cambios de estado. |
 
 Cada programa muestra un mensaje `PASS` si termina correctamente. Una condición
 incumplida produce un error de prueba.
@@ -125,8 +131,9 @@ no se afirma una ventaja de tiempo para solo 23 personajes sin medirla.
 
 Cada partida terminada conserva un `ResultadoPartida` inmutable, accesible por
 `IPartida.getResultado()`. Antes de terminar devuelve `null`. Iniciar otra partida
-borra el resultado anterior y genera otro identificador; volver a llamar `jugar`
-sobre una partida terminada no vuelve a ejecutarla.
+borra el resultado anterior y genera otro identificador. Las acciones sobre una
+partida terminada se rechazan sin modificar su resultado. Mientras se espera la
+decisión de segunda fase, el resultado sigue siendo `null`.
 
 | Desenlace humano | Partidas totales | Victorias | Victorias verdaderas |
 |---|---:|---:|---:|
@@ -164,12 +171,66 @@ Estadisticas marcador = servicio.consultarUsuario("Ana");
 // Para modo máquina contra máquina: registrar(null, resultado) y consultarMaquinas().
 ```
 
-Después de compilar, ejecutar también:
-
-```powershell
-java -cp build EstadisticasRegressionTest
-java -cp build ResultadosRegressionTest
-```
-
 El paso 2 (comparación experimental y evidencia algorítmica) fue omitido por
 pedido del usuario. No se realizaron mediciones de rendimiento.
+
+## Separación de lógica y presentación (paso 4)
+
+`Partida` implementa `IPartida` sin depender de `Scanner`, `System.in/out`,
+Swing ni del servicio de estadísticas. `PartidaConsola` interpreta entradas,
+invoca operaciones y muestra resultados: reúne los roles de controlador y vista
+para la consola. La futura interfaz Swing podrá usar el mismo motor.
+
+| Estado | Operaciones que permiten avanzar |
+|---|---|
+| `SIN_INICIAR` | `iniciar(modo)`. |
+| `SELECCION_PERSONAJE` | `seleccionarPersonaje(id)` o `seleccionarPersonajeAleatorio()`. |
+| `EN_CURSO` | En turno humano: `preguntar(pregunta)` o `arriesgar(id)`. En turno de máquina: `ejecutarTurnoMaquina()`. |
+| `DECISION_SEGUNDA_FASE` | `decidirSegundaFase(aceptar)`. |
+| `FINALIZADA` | Consultar el resultado o iniciar otra partida. |
+
+`iniciar` también permite reiniciar desde los demás estados. Un modo inválido no
+modifica la partida existente. Las operaciones rechazan datos inválidos mediante
+`IllegalArgumentException` y acciones fuera de estado o turno mediante
+`IllegalStateException`. La consola transforma esos errores de entrada en mensajes;
+el motor conserva las validaciones aunque se use otra presentación.
+
+Cada operación válida resuelve una sola acción. Preguntar no arriesga
+automáticamente ni ejecuta al rival: la presentación solicita luego el turno
+correspondiente. `getTurno()` devuelve `null` cuando no hay turno activo;
+`getFase()` y `getRonda()` permiten presentar el avance sin contarlo en la vista.
+
+`ResultadoTurno` es inmutable y contiene pregunta/respuesta o personaje intentado,
+acierto, descartes y candidatos restantes. En turnos de máquina también contiene
+un `DiagnosticoTurno`: riesgo, sorteo, motivo de decisión, comparaciones sí/no y
+preguntas empatadas. La consola redacta las explicaciones a partir de esos datos,
+después de resolver el turno, sin repetir cálculos de estrategia ni sorteos.
+No se acumula automáticamente un historial de turnos.
+
+Las listas de personajes/candidatos y el conjunto de preguntas realizadas son
+copias inmutables. El motor no entrega sus tableros modificables. Los antiguos
+getters de objetivos se reemplazan por `getSecretoEspectador(participante)`,
+disponible únicamente en modo máquina contra máquina. En modos humanos, una
+pregunta devuelve la respuesta, no el personaje secreto rival.
+
+Ejemplo de uso sin consola:
+
+```java
+IPartida partida = new Partida();
+partida.iniciar(ModoJuego.JUGADOR_VS_MAQUINA_1);
+partida.seleccionarPersonajeAleatorio();
+ResultadoTurno respuesta = partida.preguntar(Pregunta.USA_LENTES);
+ResultadoTurno rival = partida.ejecutarTurnoMaquina();
+// Consultar el estado antes de solicitar la siguiente acción.
+```
+
+Cambios de API: desaparecen `Partida(Scanner)` y `IPartida.jugar()`.
+El flujo completo de consola se ejecuta con `PartidaConsola.jugar(modo)`;
+`IMaquina.ejecutarTurno` devuelve `ResultadoTurno` en lugar de `boolean`.
+Los constructores con `Random` permiten reproducir por separado el mazo/secretos
+y las decisiones de cada máquina.
+
+La consola puede detenerse por fin de entrada sin inventar un resultado; el
+adaptador permite continuar la instancia en memoria mediante `continuar()`.
+Esto no guarda partidas incompletas en disco. La integración de estadísticas,
+la captura de usuario y las ventanas siguen previstas para el paso 5.

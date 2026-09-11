@@ -66,3 +66,50 @@ nuevas pruebas de estadísticas y resultados. Cobertura de ambos órdenes de fas
 derrota en segunda fase, ganadores de máquinas, reinicio, nombres con acentos,
 recarga, duplicados, archivo inválido y reintento tras fallo simulado de guardado.
 Herramientas: PowerShell, apply_patch, javac, java y lectura del historial de la tarea.
+## 2026-09-10 - Paso 4: separar lógica y presentación
+
+Alcance aprobado: motor por acciones sin consola, adaptador de consola, resultados
+estructurados de turno, consultas protegidas, pruebas por API pública y comentarios
+breves en español en los bloques complejos. Swing continúa en el paso 5.
+Al retomar la tarea se verificó que no había modificaciones iniciadas.
+
+Implementación:
+
+- `Partida` conserva estado, fase, ronda y turno; valida las acciones antes de
+  modificar el juego. Se eliminan Scanner, impresiones y el bucle de partida completa.
+- `PartidaConsola` lee opciones y presenta respuestas y decisiones. `MenuConsola`
+  abre este adaptador. El fin de entrada deja una partida incompleta sin resultado.
+- `ResultadoTurno` y `DiagnosticoTurno` conservan datos inmutables de la acción:
+  riesgo, sorteo, comparaciones, empates, respuesta o intento y descartes. Las
+  estrategias dejan de imprimir; la consola no repite la decisión aleatoria.
+- Las consultas de personajes, candidatos y preguntas devuelven copias inmutables.
+  Los secretos de máquinas solo pueden consultarse en modo espectador.
+- La segunda fase mantiene el UUID y el secreto humano, copia independientemente
+  el tablero heredado, excluye el secreto anterior y reinicia preguntas y ronda.
+  La decisión pendiente no genera un resultado definitivo.
+- Los constructores aceptan fuentes aleatorias separadas para reproducir secretos
+  y decisiones. Las pruebas de partida ya no alteran campos privados con reflexión.
+- Se comentaron validaciones previas a la mutación, transiciones de fase, herencia,
+  protección de consultas y conservación del diagnóstico anterior al filtrado.
+  README e informe técnico incluyen contratos, cambios de API y complejidades.
+
+Verificación realizada:
+
+- Antes de editar: compilación y ocho programas de regresión originales aprobados.
+- Después: compilación UTF-8 con `-Xlint:all`, sin errores ni advertencias, y nueve
+  programas de regresión aprobados. Se conserva cobertura de 1.440 búsquedas,
+  22.000 tableros, ambos órdenes de fase y límites de 0, 14, 15 y 22 descartes.
+- Pruebas del motor con entrada estándar que falla al leer y captura de salida;
+  estados, turnos, consultas inmutables y rechazos sin efectos comprobados.
+- Flujos de consola con entradas inválidas, preguntas agotadas, reanudación,
+  aceptación/rechazo de desafío y victoria verdadera. Ejecución desde `main.Main`
+  de partida espectador completa, regreso al menú y cierre por fin de entrada humano.
+
+No se modificaron las fórmulas de estrategia, el catálogo, MergeSort ni la
+persistencia. Cambiaron las API de partida y máquina y la organización de los
+mensajes de consola. La integración del marcador y la captura de usuario siguen
+pendientes para Swing. No se realizaron commits ni publicación remota.
+
+Herramientas: asistencia de Codex, PowerShell con escritura UTF-8 explícita,
+apply_patch, javac, java y consultas de Git. La revisión final no detectó errores
+de espacios en el diff; las verificaciones no requieren dependencias nuevas.

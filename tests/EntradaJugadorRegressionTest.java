@@ -1,137 +1,151 @@
-import datos.MazoPersonajes;
+import Funcionalidades.Partida;
+import Funcionalidades.PartidaConsola;
+import datos.EstadoPartida;
 import datos.ModoJuego;
+import datos.Participante;
 import datos.Personaje;
 import datos.Pregunta;
-import defaults.CatalogoPersonajes;
-import Funcionalidades.Partida;
-import Funcionalidades.TableroCandidatos;
-
+import datos.ResultadoTurno;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import soporte.PartidaPrueba;
+import static soporte.PartidaPrueba.comprobar;
+import static soporte.PartidaPrueba.rechaza;
 
 public class EntradaJugadorRegressionTest {
-    private static final ByteArrayOutputStream output = new ByteArrayOutputStream();
+    public static void main(String[] args) {
+        preguntasRepetidasYFiltrado();
+        intentosInvalidos();
+        preguntasAgotadas();
+        seleccionYReinicio();
+        consolaInvalidaYReanudacion();
+        consolaAmbasFases();
+        System.out.println("PASS: API de entradas, preguntas repetidas y agotadas, ID inválidos, consola y reinicio");
+    }
 
-    public static void main(String[] args) throws Exception {
-        PrintStream original = System.out;
-        try {
-            System.setOut(new PrintStream(output, true, "UTF-8"));
-            checkRepeatedQuestions();
-            checkInvalidGuesses();
-            checkFilteredGuess();
-            checkExhaustedQuestions();
-            checkManualSelectionAndRestart();
-        } finally {
-            System.setOut(original);
+    private static void preguntasRepetidasYFiltrado() {
+        PartidaPrueba caso = new PartidaPrueba(ModoJuego.JUGADOR_VS_MAQUINA_1, true);
+        Partida partida = caso.partida;
+        ResultadoTurno accion = partida.preguntar(Pregunta.ES_FEMENINO);
+        comprobar(!accion.isAcierto(), "Preguntar no puede ganar");
+        comprobar(accion.getRespuesta() == Pregunta.ES_FEMENINO.cumple(caso.primerSecreto), "Respuesta errónea");
+        comprobar(partida.getCandidatos(Participante.JUGADOR).contains(caso.primerSecreto), "Se descartó el secreto");
+        partida.ejecutarTurnoMaquina();
+        List<Personaje> antes = partida.getCandidatos(Participante.JUGADOR);
+        rechaza(IllegalArgumentException.class, () -> partida.preguntar(Pregunta.ES_FEMENINO));
+        rechaza(IllegalArgumentException.class, () -> partida.preguntar(null));
+        Personaje descartado = caso.personajes.stream().filter(p -> !antes.contains(p)).findFirst().orElseThrow();
+        rechaza(IllegalArgumentException.class, () -> partida.arriesgar(descartado.getId()));
+        comprobar(partida.getTurno() == Participante.JUGADOR && partida.getRonda() == 2, "Rechazo consumió turno");
+        comprobar(partida.getCandidatos(Participante.JUGADOR).equals(antes), "Rechazo cambió candidatos");
+        comprobar(partida.getPreguntasRealizadas().size() == 1, "Rechazo cambió historial");
+        comprobar(partida.arriesgar(caso.primerSecreto.getId()).isAcierto(), "No se pudo ganar después del rechazo");
+    }
+
+    private static void intentosInvalidos() {
+        PartidaPrueba caso = new PartidaPrueba(ModoJuego.JUGADOR_VS_MAQUINA_2, true);
+        Partida partida = caso.partida;
+        int fallido = caso.fallarJugador().getIntento().getId();
+        partida.ejecutarTurnoMaquina();
+        int ausente = 1;
+        while (contieneId(caso.personajes, ausente)) { ausente++; }
+        for (int id : new int[] {Integer.MIN_VALUE, 0, 37, Integer.MAX_VALUE, ausente, fallido}) {
+            rechaza(IllegalArgumentException.class, () -> partida.arriesgar(id));
         }
-        System.out.println("PASS: repeated questions, absent/discarded IDs, exhausted questions and game restart");
+        comprobar(partida.getCandidatos(Participante.JUGADOR).size() == 22, "Rechazo cambió candidatos");
+        comprobar(partida.getTurno() == Participante.JUGADOR && partida.getRonda() == 2, "Rechazo cambió turno");
+        comprobar(partida.arriesgar(caso.primerSecreto.getId()).isAcierto(), "Intento válido rechazado");
     }
 
-    private static void checkRepeatedQuestions() throws Exception {
-        Partida game = fixture("1\n1\n1\n1\n8\n2\n30\n");
-        Personaje target = CatalogoPersonajes.crearCatalogo().buscarPorId(30);
-        check(!turn(game, target), "Question should not win");
-        output.reset();
-        check(!turn(game, target), "Second valid question should not win");
-        check(text().contains("Ya realizaste esa pregunta"), "Repeated question accepted");
-        check(count(text(), "Pregunta realizada:") == 1, "Repeated question was evaluated again");
-        check(game.getTableroJugador().estaVivo(30), "Correct target discarded");
-        check(turn(game, target), "Rejected question consumed or corrupted a turn");
+    private static void preguntasAgotadas() {
+        PartidaPrueba caso = new PartidaPrueba(ModoJuego.JUGADOR_VS_MAQUINA_1, true);
+        for (Pregunta pregunta : Pregunta.values()) {
+            comprobar(!caso.partida.preguntar(pregunta).isAcierto(), "Pregunta ganó el turno");
+            caso.partida.ejecutarTurnoMaquina();
+        }
+        comprobar(caso.partida.getPreguntasRealizadas().size() == Pregunta.values().length, "Faltan preguntas");
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        Scanner entrada = new Scanner("1\n3\n2\n" + caso.primerSecreto.getId() + "\n2\ncentinela\n");
+        new PartidaConsola(caso.partida, entrada, new PrintStream(salida, true, StandardCharsets.UTF_8)).continuar();
+        comprobar(salida.toString(StandardCharsets.UTF_8).contains("Ya realizaste todas las preguntas"), "Falta aviso");
+        comprobar(caso.partida.getResultado() != null, "No se pudo salir del menú de preguntas agotadas");
+        comprobar(entrada.nextLine().equals("centinela"), "La consola consumió entrada posterior al final");
     }
 
-    private static void checkInvalidGuesses() throws Exception {
-        Partida game = fixture("2\n2\n2\nabc\n0\n37\n1\n2\n36\n");
-        Personaje target = CatalogoPersonajes.crearCatalogo().buscarPorId(36);
-        check(!turn(game, target), "Wrong guess won");
-        check(!game.getTableroJugador().estaVivo(2), "Failed guess was not discarded");
-        output.reset();
-        check(turn(game, target), "Invalid ID consumed the turn before valid winning guess");
-        check(text().contains("Entrada no v") && text().contains("no pertenece a esta partida")
-                        && text().contains("ya fue descartado"), "Missing rejection feedback");
-        check(count(text(), "INCORRECTO") == 0, "Rejected input evaluated as a guess");
-        check(game.getTableroJugador().getCantidadViva() == 2, "Rejected input changed candidates");
+    private static void seleccionYReinicio() {
+        Partida partida = new Partida(new Random(42));
+        partida.iniciar(ModoJuego.JUGADOR_VS_MAQUINA_1);
+        int ausente = 1;
+        while (contieneId(partida.getPersonajes(), ausente)) { ausente++; }
+        final int idAusente = ausente;
+        rechaza(IllegalArgumentException.class, () -> partida.seleccionarPersonaje(idAusente));
+        comprobar(partida.getEstado() == EstadoPartida.SELECCION_PERSONAJE, "Selección inválida avanzó estado");
+        comprobar(partida.getPersonajeJugador() == null, "Selección inválida asignó secreto");
+        partida.seleccionarPersonaje(partida.getPersonajes().get(0).getId());
+        partida.preguntar(Pregunta.USA_LENTES);
+        partida.iniciar(ModoJuego.JUGADOR_VS_MAQUINA_2);
+        comprobar(partida.getPreguntasRealizadas().isEmpty(), "Reinicio conservó preguntas");
+        comprobar(partida.getCandidatos(Participante.MAQUINA_1).isEmpty(), "Reinicio conservó rival");
+        comprobar(partida.getResultado() == null && partida.getPersonajeJugador() == null, "Reinicio conservó datos");
+        partida.seleccionarPersonajeAleatorio();
+        comprobar(partida.getPersonajes().contains(partida.getPersonajeJugador()), "Secreto fuera del mazo");
+        partida.preguntar(Pregunta.USA_LENTES);
     }
 
-    private static void checkFilteredGuess() throws Exception {
-        Partida game = fixture("1\n1\n2\n2\n36\n");
-        Personaje target = CatalogoPersonajes.crearCatalogo().buscarPorId(36);
-        check(!turn(game, target), "Question should not win");
-        check(!game.getTableroJugador().estaVivo(2), "Question did not discard mismatching candidate");
-        output.reset();
-        check(turn(game, target), "Guess for a filtered character consumed a turn");
-        check(text().contains("ya fue descartado"), "Filtered character was accepted");
+    private static void consolaInvalidaYReanudacion() {
+        PartidaPrueba caso = new PartidaPrueba(ModoJuego.JUGADOR_VS_MAQUINA_2, true);
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        PrintStream impresora = new PrintStream(salida, true, StandardCharsets.UTF_8);
+        new PartidaConsola(caso.partida, new Scanner("abc\n0\n3\n2\nabc\n0\n37\n"), impresora).continuar();
+        comprobar(caso.partida.getTurno() == Participante.JUGADOR, "Entrada inválida consumió turno");
+        comprobar(caso.partida.getCandidatos(Participante.JUGADOR).size() == 23, "Entrada inválida descartó");
+        comprobar(caso.partida.getResultado() == null, "Fin de entrada inventó resultado");
+        String texto = salida.toString(StandardCharsets.UTF_8);
+        comprobar(texto.contains("Entrada no válida") && texto.contains("fuera de rango")
+                && texto.contains("no pertenece"), "Faltan mensajes de entrada inválida");
+        new PartidaConsola(caso.partida,
+                new Scanner("2\n" + caso.primerSecreto.getId() + "\n2\n"), impresora).continuar();
+        comprobar(caso.partida.getResultado() != null, "No se pudo reanudar la consola");
+
+        Partida seleccion = new Partida(new Random(42));
+        seleccion.iniciar(ModoJuego.JUGADOR_VS_MAQUINA_1);
+        int id = seleccion.getPersonajes().get(0).getId();
+        new PartidaConsola(seleccion, new Scanner("1\nabc\n0\n37\n" + id + "\n"), impresora).continuar();
+        comprobar(seleccion.getPersonajeJugador().getId() == id, "Selección manual por consola incorrecta");
+
+        PartidaPrueba repetida = new PartidaPrueba(ModoJuego.JUGADOR_VS_MAQUINA_1, true);
+        salida.reset();
+        new PartidaConsola(repetida.partida, new Scanner("1\n1\n1\n1\n8\n"), impresora).continuar();
+        comprobar(salida.toString(StandardCharsets.UTF_8).contains("Ya realizaste esa pregunta"), "Falta aviso de repetición");
+        comprobar(repetida.partida.getPreguntasRealizadas().size() == 2
+                && repetida.partida.getRonda() == 3, "La repetición consumió un turno");
     }
 
-    private static void checkExhaustedQuestions() throws Exception {
-        StringBuilder input = new StringBuilder();
-        for (int i = 1; i <= Pregunta.values().length; i++) { input.append("1\n").append(i).append('\n'); }
-        input.append("1\n2\n36\n");
-        Partida game = fixture(input.toString());
-        Personaje target = CatalogoPersonajes.crearCatalogo().buscarPorId(36);
-        for (Pregunta ignored : Pregunta.values()) { check(!turn(game, target), "Question should not win"); }
-        output.reset();
-        check(turn(game, target), "No way to leave the exhausted question menu in the same turn");
-        check(text().contains("Ya realizaste todas las preguntas"), "Missing exhausted-menu feedback");
+    private static boolean contieneId(List<Personaje> personajes, int id) {
+        return personajes.stream().anyMatch(p -> p.getId() == id);
     }
 
-    private static void checkManualSelectionAndRestart() throws Exception {
-        MazoPersonajes expected = CatalogoPersonajes.crearMazo(new Random(42));
-        int absent = 1;
-        while (expected.buscarPorId(absent) != null) { absent++; }
-        int present = expected.iterator().next().getId();
-        Partida game = new Partida(new Scanner("1\n" + absent + "\n" + present + "\n1\n2\n1\n"),
-                new Random(42));
-        output.reset();
-        game.iniciar(ModoJuego.JUGADOR_VS_MAQUINA_1);
-        check(game.getPersonajeJugador().getId() == present, "Manual selection accepted absent ID");
-        check(text().contains("no pertenece a esta partida"), "Manual selection did not reject absent ID");
-        Method question = Partida.class.getDeclaredMethod("hacerPreguntaJugador", Personaje.class);
-        question.setAccessible(true);
-        check((Boolean) question.invoke(game, game.getObjetivoMaquina1()), "First question unavailable");
-        game.iniciar(ModoJuego.JUGADOR_VS_MAQUINA_2);
-        check(game.getObjetivoMaquina1() == null && game.getTableroMaquina1() == null,
-                "Previous opponent survived game restart");
-        output.reset();
-        check((Boolean) question.invoke(game, game.getObjetivoMaquina2()), "Question not reset in new game");
-        check(!text().contains("Ya realizaste esa pregunta"), "Question history survived game restart");
-    }
-
-    private static Partida fixture(String input) throws Exception {
-        MazoPersonajes catalog = CatalogoPersonajes.crearCatalogo();
-        MazoPersonajes deck = new MazoPersonajes();
-        deck.agregar(catalog.buscarPorId(2));
-        deck.agregar(catalog.buscarPorId(30));
-        deck.agregar(catalog.buscarPorId(36));
-        Partida game = new Partida(new Scanner(input), new Random(1));
-        set(game, "mazo", deck);
-        set(game, "tableroJugador", new TableroCandidatos(deck));
-        output.reset();
-        return game;
-    }
-
-    private static boolean turn(Partida game, Personaje target) throws Exception {
-        Method turn = Partida.class.getDeclaredMethod("turnoJugador", Personaje.class);
-        turn.setAccessible(true);
-        return (Boolean) turn.invoke(game, target);
-    }
-
-    private static void set(Object target, String name, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
-
-    private static int count(String text, String token) {
-        return (text.length() - text.replace(token, "").length()) / token.length();
-    }
-
-    private static String text() throws Exception { return output.toString("UTF-8"); }
-
-    private static void check(boolean condition, String message) {
-        if (!condition) { throw new AssertionError(message); }
+    private static void consolaAmbasFases() {
+        for (ModoJuego modo : new ModoJuego[] {ModoJuego.JUGADOR_VS_MAQUINA_1, ModoJuego.JUGADOR_VS_MAQUINA_2}) {
+            PartidaPrueba esperado = new PartidaPrueba(modo, true);
+            Partida partida = new Partida(new Random(9), new PartidaPrueba.AzarFijo(0.0, 0),
+                    new PartidaPrueba.AzarFijo(0.0, 0));
+            Scanner entrada = new Scanner("1\n" + esperado.humano.getId() + "\n2\n"
+                    + esperado.primerSecreto.getId() + "\n0\nabc\n1\n2\n"
+                    + esperado.segundoSecreto.getId() + "\ncentinela\n");
+            ByteArrayOutputStream salida = new ByteArrayOutputStream();
+            new PartidaConsola(partida, entrada,
+                    new PrintStream(salida, true, StandardCharsets.UTF_8)).jugar(modo);
+            String texto = salida.toString(StandardCharsets.UTF_8);
+            comprobar(texto.contains("INICIANDO FASE 2") && texto.contains("Victoria verdadera"),
+                    "La consola no completó ambas fases");
+            comprobar(partida.getResultado().getDesenlace() == datos.ResultadoPartida.Desenlace.VICTORIA_VERDADERA,
+                    "Resultado de consola incorrecto");
+            comprobar(entrada.nextLine().equals("centinela"), "La consola consumió entrada después del final");
+        }
     }
 }

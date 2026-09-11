@@ -1,184 +1,135 @@
-import datos.ModoJuego;
-import datos.Personaje;
-import datos.Pregunta;
-import defaults.CatalogoPersonajes;
 import Funcionalidades.Maquina1;
 import Funcionalidades.Maquina2;
-import datos.MazoPersonajes;
 import Funcionalidades.Partida;
+import Funcionalidades.PartidaConsola;
 import Funcionalidades.TableroCandidatos;
 import Interfaces.IArbitroTurno;
 import Interfaces.IMaquina;
-
+import datos.EstadoPartida;
+import datos.MazoPersonajes;
+import datos.ModoJuego;
+import datos.Participante;
+import datos.Personaje;
+import datos.Pregunta;
+import datos.ResultadoTurno;
+import defaults.CatalogoPersonajes;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import soporte.PartidaPrueba;
+import static soporte.PartidaPrueba.comprobar;
+import static soporte.PartidaPrueba.rechaza;
 
 public class SecretosRegressionTest {
-    private static final ByteArrayOutputStream output = new ByteArrayOutputStream();
-
     public static void main(String[] args) throws Exception {
-        PrintStream original = System.out;
-        try {
-            System.setOut(new PrintStream(output, true, "UTF-8"));
-            check(IMaquina.class.getMethod("ejecutarTurno", IArbitroTurno.class) != null,
-                    "Machines must receive an arbiter");
-            for (Method method : IMaquina.class.getMethods()) {
-                for (Class<?> parameter : method.getParameterTypes()) {
-                    check(parameter != Personaje.class, "Machine API exposes the secret");
-                }
+        comprobar(IMaquina.class.getMethod("ejecutarTurno", IArbitroTurno.class) != null, "Falta el árbitro");
+        for (Method method : IMaquina.class.getMethods()) {
+            for (Class<?> parameter : method.getParameterTypes()) {
+                comprobar(parameter != Personaje.class, "La API recibe el secreto");
             }
-            checkInitialVisibility();
-            checkMachineTurns();
-            checkSecondPhase(ModoJuego.JUGADOR_VS_MAQUINA_1);
-            checkSecondPhase(ModoJuego.JUGADOR_VS_MAQUINA_2);
-            for (int seed = 0; seed < 100; seed++) {
-                Partida game = new Partida(new Scanner(""));
-                seed(game, seed);
-                game.iniciar(ModoJuego.MAQUINA_1_VS_MAQUINA_2);
-                check(game.getObjetivoMaquina1().getId() != game.getObjetivoMaquina2().getId(),
-                        "Spectator machines share a secret");
-                check(game.getTableroMaquina1().estaVivo(game.getObjetivoMaquina2().getId()),
-                        "Spectator target absent from deck");
-                output.reset();
-                game.jugar();
-                check(text().contains("HA ADIVINADO"), "Spectator game did not finish");
-            }
-        } finally {
-            System.setOut(original);
         }
-        System.out.println("PASS: secret visibility, arbiter API, 1440 machine searches, "
-                + "both second-phase orders and 100 spectator games");
+        visibilidad();
+        busquedas();
+        segundaFase(ModoJuego.JUGADOR_VS_MAQUINA_1);
+        segundaFase(ModoJuego.JUGADOR_VS_MAQUINA_2);
+        espectadores();
+        System.out.println("PASS: secretos protegidos, árbitro, 1440 búsquedas, ambas fases y 100 partidas espectador");
     }
 
-    private static void checkInitialVisibility() throws Exception {
-        for (ModoJuego mode : new ModoJuego[] {ModoJuego.JUGADOR_VS_MAQUINA_1,
-                ModoJuego.JUGADOR_VS_MAQUINA_2, ModoJuego.MAQUINA_1_VS_MAQUINA_2}) {
-            Partida game = new Partida(new Scanner("2\n"));
-            output.reset();
-            game.iniciar(mode);
-            boolean spectator = mode == ModoJuego.MAQUINA_1_VS_MAQUINA_2;
-            check(text().contains("Objetivo secreto de") == spectator,
-                    "Incorrect secret visibility in " + mode);
-            if (!spectator) {
-                check(text().contains("Tu personaje secreto:"), "Own secret is missing");
+    private static void visibilidad() {
+        for (ModoJuego modo : new ModoJuego[] {ModoJuego.JUGADOR_VS_MAQUINA_1, ModoJuego.JUGADOR_VS_MAQUINA_2}) {
+            Partida partida = new Partida(new Random(9));
+            ByteArrayOutputStream salida = new ByteArrayOutputStream();
+            new PartidaConsola(partida, new Scanner("2\n"),
+                    new PrintStream(salida, true, StandardCharsets.UTF_8)).jugar(modo);
+            String texto = salida.toString(StandardCharsets.UTF_8);
+            comprobar(texto.contains("Tu personaje secreto:"), "No muestra el secreto propio");
+            comprobar(!texto.contains("Personaje secreto de Máquina"), "La consola expone secretos rivales");
+            for (Participante participante : Participante.values()) {
+                rechaza(IllegalStateException.class, () -> partida.getSecretoEspectador(participante));
             }
         }
     }
 
-    private static void checkMachineTurns() throws Exception {
-        MazoPersonajes deck = CatalogoPersonajes.crearCatalogo();
-        Partida referee = new Partida(new Scanner(""));
-        Method turn = Partida.class.getDeclaredMethod("ejecutarTurnoMaquina", IMaquina.class, Personaje.class);
-        turn.setAccessible(true);
-        for (Personaje target : deck) {
-            for (int seed = 0; seed < 10; seed++) {
-                for (int kind = 1; kind <= 2; kind++) {
-                    for (boolean inherited : new boolean[] {false, true}) {
-                        TableroCandidatos previous = new TableroCandidatos(deck);
-                        if (inherited) {
-                            previous.descartarSegun(Pregunta.USA_LENTES, Pregunta.USA_LENTES.cumple(target));
+    private static void busquedas() {
+        MazoPersonajes mazo = CatalogoPersonajes.crearCatalogo();
+        for (Personaje objetivo : mazo) {
+            for (int semilla = 0; semilla < 10; semilla++) {
+                for (int clase = 1; clase <= 2; clase++) {
+                    for (boolean heredar : new boolean[] {false, true}) {
+                        TableroCandidatos anterior = new TableroCandidatos(mazo);
+                        if (heredar) {
+                            anterior.descartarSegun(Pregunta.USA_LENTES, Pregunta.USA_LENTES.cumple(objetivo));
                         }
-                        int originalCount = previous.getCantidadViva();
-                        IMaquina machine = kind == 1
-                                ? new Maquina1(deck, previous, new Random(seed))
-                                : new Maquina2(deck, previous, new Random(seed));
-                        boolean won = false;
-                        // Each unsuccessful turn must eliminate at least one candidate.
-                        int limit = originalCount;
-                        for (int round = 0; round < limit && !won; round++) {
-                            output.reset();
-                            int before = machine.getTablero().getCantidadViva();
-                            won = (Boolean) turn.invoke(referee, machine, target);
-                            check(machine.getTablero().estaVivo(target.getId()), "Correct target discarded");
-                            check(won || machine.getTablero().getCantidadViva() < before,
-                                    "Unsuccessful turn made no progress");
-                            if (won) {
-                                check(text().contains("El personaje era: " + target.getNombre()),
-                                        "Machine declared the wrong winner");
-                            }
+                        int cantidad = anterior.getCantidadViva();
+                        IMaquina maquina = clase == 1 ? new Maquina1(mazo, anterior, new Random(semilla))
+                                : new Maquina2(mazo, anterior, new Random(semilla));
+                        IArbitroTurno arbitro = new IArbitroTurno() {
+                            public boolean responder(Pregunta pregunta) { return pregunta.cumple(objetivo); }
+                            public boolean comprobarIntento(int id) { return id == objetivo.getId(); }
+                        };
+                        boolean gano = false;
+                        // Todo turno fallido debe eliminar al menos un candidato.
+                        for (int turno = 0; turno < cantidad && !gano; turno++) {
+                            int antes = maquina.getTablero().getCantidadViva();
+                            ResultadoTurno accion = maquina.ejecutarTurno(arbitro);
+                            gano = accion.isAcierto();
+                            comprobar(maquina.getTablero().estaVivo(objetivo.getId()), "Descartó el secreto");
+                            comprobar(gano || maquina.getTablero().getCantidadViva() < antes, "Turno sin progreso");
+                            comprobar(accion.getCandidatosRestantes() == maquina.getTablero().getCantidadViva(),
+                                    "Resultado de turno desactualizado");
+                            if (gano) { comprobar(accion.getIntento().equals(objetivo), "Ganó con otro personaje"); }
                         }
-                        check(won, "Machine failed to find target within its strategy turn limit");
-                        check(previous.getCantidadViva() == originalCount, "Inherited board was mutated");
+                        comprobar(gano, "No encontró el secreto dentro del límite");
+                        comprobar(anterior.getCantidadViva() == cantidad, "Modificó el tablero heredado original");
                     }
                 }
             }
         }
     }
 
-    private static void checkSecondPhase(ModoJuego mode) throws Exception {
-        Random expected = new Random(9);
-        MazoPersonajes deck = CatalogoPersonajes.crearMazo(expected);
-        Personaje player = deck.iterator().next();
-        Personaje firstSecret = select(deck, expected, null);
-        Personaje secondSecret = select(deck, expected, firstSecret);
-        String input = "1\n" + player.getId() + "\n1\n1\n2\n" + firstSecret.getId()
-                + "\n1\n2\n" + secondSecret.getId() + "\n1\n";
-        Partida game = new Partida(new Scanner(input), new Random(9));
-        game.iniciar(mode);
-        Field firstField = Partida.class.getDeclaredField(
-                mode == ModoJuego.JUGADOR_VS_MAQUINA_1 ? "maquina1" : "maquina2");
-        firstField.setAccessible(true);
-        IMaquina first = (IMaquina) firstField.get(game);
-        // Force a failed guess so both strategies leave the optional phase available.
-        Random failedGuess = new Random(0) {
-            private static final long serialVersionUID = 1L;
-            @Override public double nextDouble() { return 0.0; }
-            @Override public int nextInt(int bound) { return 1; }
-        };
-        first = mode == ModoJuego.JUGADOR_VS_MAQUINA_1
-                ? new Maquina1(deck, (TableroCandidatos) first.getTablero(), failedGuess)
-                : new Maquina2(deck, (TableroCandidatos) first.getTablero(), failedGuess);
-        firstField.set(game, first);
-        output.reset();
-        game.jugar();
-        check(text().contains("INICIANDO FASE 2"), "Second phase missing");
-        check(!text().contains("Objetivo secreto de"), "Second phase leaked a secret");
-        check(game.getPersonajeJugador().getId() == player.getId(), "Player secret changed");
-        check(game.getObjetivoMaquina1().getId() != game.getObjetivoMaquina2().getId(),
-                "Machines share a secret across phases");
-        check(game.getTableroJugador().getCantidadViva() == 22, "Player board must start with 22 candidates");
-        check(!game.getTableroJugador().estaVivo(firstSecret.getId()), "Previous secret was not excluded");
-        for (int id = 1; id <= CatalogoPersonajes.TOTAL_CATALOGO; id++) {
-            check(game.getTableroMaquina1().estaVivo(id) == game.getTableroMaquina2().estaVivo(id),
-                    "Second machine did not inherit candidates");
-            check(game.getTableroJugador().estaVivo(id)
-                            == (deck.buscarPorId(id) != null && id != firstSecret.getId()),
-                    "Deck changed between phases");
+    private static void segundaFase(ModoJuego modo) {
+        PartidaPrueba caso = new PartidaPrueba(modo, true);
+        Partida partida = caso.partida;
+        partida.preguntar(Pregunta.USA_LENTES);
+        partida.ejecutarTurnoMaquina();
+        Participante primera = partida.getRivalActual();
+        List<Personaje> heredados = partida.getCandidatos(primera);
+        partida.arriesgar(caso.primerSecreto.getId());
+        partida.decidirSegundaFase(true);
+        comprobar(partida.getPersonajeJugador().equals(caso.humano), "Cambió secreto humano");
+        comprobar(!caso.primerSecreto.equals(caso.segundoSecreto), "Secretos repetidos");
+        comprobar(partida.getCandidatos(Participante.JUGADOR).size() == 22, "Tablero humano incorrecto");
+        for (Personaje personaje : caso.personajes) {
+            comprobar(partida.getCandidatos(Participante.JUGADOR).contains(personaje)
+                    == !personaje.equals(caso.primerSecreto), "Cambió mazo entre fases");
         }
-        check(text().contains("El personaje secreto era: " + secondSecret.getNombre()),
-                "Second phase did not finish against the correct secret");
-        Method question = Partida.class.getDeclaredMethod("hacerPreguntaJugador", Personaje.class);
-        question.setAccessible(true);
-        output.reset();
-        check((Boolean) question.invoke(game, secondSecret), "Question unavailable for new secret");
-        check(!text().contains("Ya realizaste esa pregunta"), "Question history was not reset");
+        comprobar(partida.getCandidatos(partida.getRivalActual()).equals(heredados), "No heredó los candidatos");
+        comprobar(partida.getPreguntasRealizadas().isEmpty(), "Preguntas no reiniciadas");
+        rechaza(IllegalStateException.class, () -> partida.getSecretoEspectador(partida.getRivalActual()));
+        ResultadoTurno pregunta = partida.preguntar(Pregunta.USA_LENTES);
+        comprobar(pregunta.getRespuesta() == Pregunta.USA_LENTES.cumple(caso.segundoSecreto), "Usó el secreto anterior");
+        partida.ejecutarTurnoMaquina();
+        comprobar(partida.arriesgar(caso.segundoSecreto.getId()).isAcierto(), "No encontró el nuevo secreto");
     }
 
-    private static Personaje select(MazoPersonajes deck, Random random, Personaje excluded) {
-        int index = random.nextInt(deck.getCantidad() - (excluded == null ? 0 : 1));
-        for (Personaje p : deck) {
-            if (!p.equals(excluded) && index-- == 0) {
-                return p;
+    private static void espectadores() {
+        for (int semilla = 0; semilla < 100; semilla++) {
+            Partida partida = new Partida(new Random(semilla), new Random(semilla), new Random(semilla + 100));
+            partida.iniciar(ModoJuego.MAQUINA_1_VS_MAQUINA_2);
+            comprobar(!partida.getSecretoEspectador(Participante.MAQUINA_1)
+                    .equals(partida.getSecretoEspectador(Participante.MAQUINA_2)), "Secretos iguales");
+            comprobar(partida.getCandidatos(Participante.MAQUINA_1)
+                    .contains(partida.getSecretoEspectador(Participante.MAQUINA_2)), "Objetivo ausente");
+            int turnos = 0;
+            while (partida.getEstado() != EstadoPartida.FINALIZADA && turnos++ < 46) {
+                partida.ejecutarTurnoMaquina();
             }
+            comprobar(partida.getResultado() != null, "Partida espectador no finalizó");
         }
-        throw new AssertionError("No character selected");
-    }
-
-    private static void seed(Object object, long value) throws Exception {
-        Field random = object.getClass().getDeclaredField("random");
-        random.setAccessible(true);
-        ((Random) random.get(object)).setSeed(value);
-    }
-
-    private static String text() throws Exception {
-        return output.toString("UTF-8");
-    }
-
-    private static void check(boolean condition, String message) {
-        if (!condition) { throw new AssertionError(message); }
     }
 }

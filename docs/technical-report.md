@@ -93,8 +93,8 @@ No atribuir autoría al equipo ni afirmar mediciones que no estén registradas.
 
 ## Paso 3: resultado y persistencia
 
-`Partida` conserva un resultado definitivo con UUID, modo y desenlace; la segunda
-fase ahora devuelve su ganador. Ganar ambas fases suma una victoria verdadera
+`Partida` conserva un resultado definitivo con UUID, modo y desenlace, resuelto
+al finalizar el último enfrentamiento o rechazar el desafío opcional. Ganar ambas fases suma una victoria verdadera
 incluida en las victorias; perder la segunda deja una derrota final. Una partida
 completa cuenta una sola vez aunque tenga dos fases.
 
@@ -118,3 +118,87 @@ invoca automáticamente el servicio. Las pruebas ejercitan directamente la API.
 
 Paso 2: omitido por decisión del usuario; los pendientes de comparación experimental
 anteriores quedan fuera del alcance actual, sin mediciones ni afirmaciones nuevas.
+
+## Paso 4: motor por acciones y presentación de consola
+
+La separación se basa en responsabilidades y dependencias, no en renombrar
+paquetes. `Partida`, tableros y estrategias forman el núcleo del juego.
+`PartidaConsola` controla la interacción y presenta los datos; `MenuConsola`
+elige el modo. Se conservan los paquetes y la biblioteca estándar.
+
+### Estado y transiciones
+
+El motor conserva `EstadoPartida`, fase, ronda y participante de turno.
+Al iniciar un modo humano genera el mazo y espera una selección válida; en modo
+espectador sortea dos secretos distintos y comienza Máquina 1.
+
+Una pregunta humana registra su respuesta y filtra candidatos; un intento
+fallido descarta únicamente el ID intentado. Ambas acciones ceden el turno.
+Un turno fallido del rival devuelve el turno humano y avanza la ronda.
+En modo espectador la ronda avanza después de Máquina 2.
+
+Al ganar la primera fase, el motor compara los descartes del rival con 15.
+Con menos de 15 queda pendiente la decisión y no existe aún un resultado final.
+Rechazar produce victoria; aceptar mantiene el UUID y el secreto humano, sortea
+un secreto distinto, copia el tablero heredado y reinicia el tablero humano con
+22 candidatos, las preguntas y la ronda. Ganar la segunda produce victoria
+verdadera; perder cualquiera de las fases produce derrota.
+
+Las validaciones de estado, turno, repetición de pregunta e ID se hacen antes
+de modificar datos. Consultar candidatos no avanza el turno. Los datos inválidos
+y las operaciones fuera de orden se distinguen mediante excepciones de argumento
+y estado. Al terminar se rechazan nuevas acciones y se conserva el mismo resultado.
+
+### Contratos y protección del estado
+
+`IPartida` expone acciones individuales y consultas. Las consultas de colecciones
+devuelven copias inmutables; no permiten descartar personajes ni modificar
+preguntas por fuera de las reglas. El secreto humano sigue consultable por su
+propia vista; los secretos de máquinas solo se consultan en modo espectador.
+`IArbitroTurno` conserva la frontera entre estrategias y secreto rival.
+
+`ResultadoTurno` distingue pregunta/respuesta de intento/acierto y conserva los
+descartes y candidatos posteriores. Para las máquinas incorpora un diagnóstico
+inmutable con la información usada al decidir. Las comparaciones se obtienen
+sobre los candidatos anteriores al filtrado, sin consultar el secreto.
+`PartidaConsola` convierte esos datos en texto después de la acción, sin volver
+a invocar la estrategia. El turno único, el riesgo y el desempate no cambian.
+
+Se sustituyen el constructor que recibía `Scanner`, el bucle `jugar()` del motor
+y las consultas que exponían objetivos o tableros modificables. Las pruebas de
+partida usan la API pública y fuentes aleatorias reproducibles, sin reflexión
+sobre campos privados. La interfaz gráfica queda para el paso siguiente.
+
+### Complejidad del motor
+
+Sean n los personajes del mazo, p las preguntas posibles y m el mayor ID.
+
+| Operación | Tiempo | Espacio adicional |
+|---|---|---|
+| Validar turno o ID y resolver un intento humano | O(1) | O(1) |
+| Resolver pregunta humana | O(n) | O(1), aparte del conjunto de preguntas |
+| Evaluar las preguntas de una máquina | O(p·n) | O(p) para comparaciones y empates |
+| Elegir un intento aleatorio entre candidatos | O(n) | O(n) para referencias de candidatos |
+| Consultar personajes o candidatos como copia inmutable | O(n) | O(n) |
+| Consultar preguntas realizadas | O(p) | O(p) |
+| Preparar segunda fase y copiar el tablero heredado | O(n + m) | O(n + m) |
+| Conservar el resultado final | O(1) | O(1) |
+
+El diagnóstico agrega O(p) por turno; el motor no conserva una lista creciente
+de resultados. El costo de seleccionar, indexar y ordenar el mazo inicial
+permanece descrito en los apartados previos. Las estrategias conservan sus
+fórmulas y decisiones; no se realizaron mediciones de rendimiento.
+
+### Verificación de la separación
+
+Además de las regresiones de mazos, resultados y persistencia, se comprueban:
+ambos órdenes de segunda fase; límites 0/14/15/22 descartes; aceptación y rechazo;
+una acción por turno; conservación del secreto humano; tablero heredado
+independiente; preguntas reiniciadas; resultado pendiente y final estable;
+consultas inmutables; entradas inválidas; y ejecución completa de consola.
+
+`MotorPartidaRegressionTest` reemplaza la entrada estándar por una que falla al
+leer y captura ambas salidas para detectar dependencias de consola durante las
+operaciones. Las pruebas de diagnóstico conservan la comparación sobre 22.000
+tableros y validan los datos anteriores al filtrado y su presentación sin repetir
+sorteos. Las 1.440 búsquedas ejercitan ambas estrategias con y sin herencia.

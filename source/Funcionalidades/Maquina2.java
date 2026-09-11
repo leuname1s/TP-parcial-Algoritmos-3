@@ -1,6 +1,7 @@
 package Funcionalidades;
 
 import datos.MazoPersonajes;
+import datos.ResultadoTurno;
 import Interfaces.IArbitroTurno;
 import Interfaces.IMaquina;
 import Interfaces.ITableroCandidatos;
@@ -40,7 +41,7 @@ public class Maquina2 implements IMaquina {
     }
 
     @Override
-    public boolean ejecutarTurno(IArbitroTurno arbitro) {
+    public ResultadoTurno ejecutarTurno(IArbitroTurno arbitro) {
         return EstrategiaMaquina.EQUILIBRADA.ejecutarTurno(nombre, mazo, tablero, random, arbitro);
     }
 }

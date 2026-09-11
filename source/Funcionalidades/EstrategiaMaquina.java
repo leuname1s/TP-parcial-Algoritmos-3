@@ -1,14 +1,17 @@
 package Funcionalidades;
 
 import Interfaces.IArbitroTurno;
+import datos.DiagnosticoTurno;
+import datos.DiagnosticoTurno.Comparacion;
+import datos.DiagnosticoTurno.Motivo;
 import datos.MazoPersonajes;
 import datos.Personaje;
 import datos.Pregunta;
-
+import datos.ResultadoTurno;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
-import java.util.function.Consumer;
 
 enum EstrategiaMaquina {
     AGRESIVA(5.0, false),
@@ -27,125 +30,76 @@ enum EstrategiaMaquina {
     }
 
     Pregunta seleccionarPregunta(TableroCandidatos tablero, Random random) {
-        return seleccionarPregunta(tablero, random, mensaje -> {});
+        return seleccionarPregunta(tablero, random, new ArrayList<>(), new ArrayList<>());
     }
 
-    // Compara la división inmediata de candidatos: minimiza o maximiza la diferencia
-    // según la estrategia y reúne todos los empates para elegir sin favorecer el orden.
-    private Pregunta seleccionarPregunta(TableroCandidatos tablero, Random random, Consumer<String> registrar) {
-        List<Pregunta> mejores = new ArrayList<>();
+    // Las comparaciones se conservan antes de filtrar: explican la decisión sin
+    // consultar el secreto ni repetir el sorteo cuando la vista muestra el turno.
+    private Pregunta seleccionarPregunta(TableroCandidatos tablero, Random random,
+            List<Comparacion> comparaciones, List<Pregunta> mejores) {
         int mejorDiferencia = buscaEquilibrio ? Integer.MAX_VALUE : -1;
         int cantidad = tablero.getCantidadViva();
-        registrar.accept("Comparo todas las preguntas sobre mis " + cantidad + " candidatos vivos."
-                + " Busco la " + (buscaEquilibrio ? "menor" : "mayor")
-                + " diferencia entre sí y no; ignoro las preguntas constantes.");
         for (Pregunta pregunta : Pregunta.values()) {
             int cantidadSi = tablero.contarSiCumplen(pregunta);
-            int cantidadNo = cantidad - cantidadSi;
-            if (cantidadSi == 0 || cantidadSi == cantidad) {
-                registrar.accept("  " + pregunta + " -> sí: " + cantidadSi + ", no: " + cantidadNo
-                        + ". La ignoro: todos responderían lo mismo.");
-                continue;
-            }
-            int diferencia = Math.abs(cantidadSi - cantidadNo);
-            registrar.accept("  " + pregunta + " -> sí: " + cantidadSi + ", no: " + cantidadNo
-                    + ", diferencia: " + diferencia + ".");
+            Comparacion comparacion = new Comparacion(pregunta, cantidadSi, cantidad - cantidadSi);
+            comparaciones.add(comparacion);
+            if (comparacion.esConstante()) { continue; }
+            int diferencia = comparacion.getDiferencia();
             if (buscaEquilibrio ? diferencia < mejorDiferencia : diferencia > mejorDiferencia) {
                 mejores.clear();
                 mejorDiferencia = diferencia;
             }
-            if (diferencia == mejorDiferencia) {
-                mejores.add(pregunta);
-            }
+            if (diferencia == mejorDiferencia) { mejores.add(pregunta); }
         }
-        if (mejores.isEmpty()) {
-            return null;
-        }
-        Pregunta elegida = mejores.get(random.nextInt(mejores.size()));
-        registrar.accept("Mejor diferencia: " + mejorDiferencia + ". Preguntas con ese valor: " + mejores + ".");
-        registrar.accept(mejores.size() > 1
-                ? "Desempato al azar entre " + mejores.size() + " preguntas: " + elegida
-                : "Hay una única mejor pregunta: " + elegida);
-        return elegida;
+        return mejores.isEmpty() ? null : mejores.get(random.nextInt(mejores.size()));
     }
 
-    boolean ejecutarTurno(String nombre, MazoPersonajes mazo, TableroCandidatos tablero,
+    ResultadoTurno ejecutarTurno(String nombre, MazoPersonajes mazo, TableroCandidatos tablero,
             Random random, IArbitroTurno arbitro) {
-        System.out.println("\n--- TURNO DE " + nombre.toUpperCase() + " ---");
+        Objects.requireNonNull(arbitro);
         int cantidad = tablero.getCantidadViva();
         if (cantidad == 0) {
             throw new IllegalStateException("La máquina no tiene candidatos para continuar");
         }
 
-        // Comparar con el mazo original incluye los descartes heredados en el riesgo.
+        // El mazo original es la referencia: incluye los descartes heredados en el riesgo.
         int descartados = mazo.getCantidad() - cantidad;
         double porcentaje = porcentajeRiesgo(descartados);
-        System.out.println("[" + nombre + "] Candidatos: " + cantidad + "; descartados: "
-                + descartados + "; probabilidad de arriesgar: " + porcentaje + "%.");
-        System.out.println("[" + nombre + "] Cálculo: 4% + " + incrementoPorDescarte
-                + " puntos por cada uno de los " + descartados + " descartes (incluidos los heredados),"
-                + " con un máximo de 100%.");
-
-        if (cantidad == 1) {
-            System.out.println("[" + nombre + "] Queda un único candidato: intento obligatorio.");
-            return arriesgar(nombre, tablero, tablero.unicoSobreviviente(), arbitro);
-        }
-
-        double sorteo = random.nextDouble();
-        System.out.println("[" + nombre + "] Sorteo de riesgo: " + (sorteo * 100.0)
-                + "; arriesga si es menor que " + porcentaje + ".");
-        if (sorteo >= porcentaje / 100.0) {
-            System.out.println("[" + nombre + "] El sorteo no indica arriesgar: busco una pregunta.");
-            Pregunta pregunta = seleccionarPregunta(tablero, random,
-                    mensaje -> System.out.println("[" + nombre + "] " + mensaje));
+        Double sorteo = cantidad == 1 ? null : random.nextDouble();
+        List<Comparacion> comparaciones = new ArrayList<>();
+        List<Pregunta> mejores = new ArrayList<>();
+        Motivo motivo = cantidad == 1 ? Motivo.CANDIDATO_UNICO : Motivo.SORTEO_RIESGO;
+        if (cantidad > 1 && sorteo >= porcentaje / 100.0) {
+            Pregunta pregunta = seleccionarPregunta(tablero, random, comparaciones, mejores);
             if (pregunta != null) {
-                int cantidadSi = tablero.contarSiCumplen(pregunta);
-                System.out.println("[" + nombre + "] Busca la división más "
-                        + (buscaEquilibrio ? "equilibrada" : "desbalanceada")
-                        + ". División elegida: " + cantidadSi + " sí / "
-                        + (cantidad - cantidadSi) + " no.");
-                System.out.println("[" + nombre + "] Si responde SÍ, descarto " + (cantidad - cantidadSi)
-                        + "; si responde NO, descarto " + cantidadSi + ".");
-                System.out.println("[" + nombre + "] Pregunta: \"" + pregunta + "\"");
+                DiagnosticoTurno diagnostico = new DiagnosticoTurno(cantidad, descartados,
+                        incrementoPorDescarte, porcentaje, sorteo, buscaEquilibrio,
+                        Motivo.PREGUNTA, comparaciones, mejores);
                 boolean respuesta = arbitro.responder(pregunta);
-                System.out.println("[" + nombre + "] Respuesta recibida: " + (respuesta ? "SÍ" : "NO"));
                 int eliminados = tablero.descartarSegun(pregunta, respuesta);
-                System.out.println("[" + nombre + "] Descartó " + eliminados
-                        + " candidatos. Le quedan " + tablero.getCantidadViva() + " candidatos.");
-                // Preguntar termina el turno, aunque haya quedado un solo candidato.
-                return false;
+                // Preguntar termina el turno aunque deje un único candidato.
+                return ResultadoTurno.pregunta(nombre, pregunta, respuesta, eliminados,
+                        tablero.getCantidadViva(), diagnostico);
             }
-            System.out.println("[" + nombre + "] No hay preguntas útiles: debe arriesgar.");
+            motivo = Motivo.SIN_PREGUNTAS;
+        }
+
+        DiagnosticoTurno diagnostico = new DiagnosticoTurno(cantidad, descartados,
+                incrementoPorDescarte, porcentaje, sorteo, buscaEquilibrio,
+                motivo, comparaciones, mejores);
+        Personaje candidato;
+        if (cantidad == 1) {
+            candidato = tablero.unicoSobreviviente();
         } else {
-            System.out.println("[" + nombre + "] El sorteo indica arriesgar: no hago una pregunta este turno.");
-        }
-
-        List<Personaje> vivos = new ArrayList<>();
-        for (Personaje personaje : mazo) {
-            if (tablero.estaVivo(personaje.getId())) {
-                vivos.add(personaje);
+            List<Personaje> vivos = new ArrayList<>();
+            for (Personaje personaje : mazo) {
+                if (tablero.estaVivo(personaje.getId())) { vivos.add(personaje); }
             }
+            candidato = vivos.get(random.nextInt(vivos.size()));
         }
-        System.out.println("[" + nombre + "] Elijo al azar entre mis " + vivos.size()
-                + " candidatos vivos; cada uno tiene 1 posibilidad entre " + vivos.size() + ".");
-        return arriesgar(nombre, tablero, vivos.get(random.nextInt(vivos.size())), arbitro);
-    }
-
-    private boolean arriesgar(String nombre, TableroCandidatos tablero,
-            Personaje candidato, IArbitroTurno arbitro) {
-        System.out.println("[" + nombre + "] Arriesga por: " + candidato.getNombre()
-                + " (ID: " + candidato.getId() + ")");
-        if (arbitro.comprobarIntento(candidato.getId())) {
-            System.out.println("\n**************************************************");
-            System.out.println("   ¡" + nombre.toUpperCase() + " HA ADIVINADO EL PERSONAJE!   ");
-            System.out.println("   El personaje era: " + candidato.getNombre()
-                    + " (ID: " + candidato.getId() + ")");
-            System.out.println("**************************************************\n");
-            return true;
-        }
-        tablero.descartar(candidato.getId());
-        System.out.println("[" + nombre + "] Falló la adivinanza. Descartó a " + candidato.getNombre()
-                + ". Le quedan " + tablero.getCantidadViva() + " candidatos.");
-        return false;
+        boolean acierto = arbitro.comprobarIntento(candidato.getId());
+        if (!acierto) { tablero.descartar(candidato.getId()); }
+        return ResultadoTurno.intento(nombre, candidato, acierto,
+                tablero.getCantidadViva(), diagnostico);
     }
 }
