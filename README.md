@@ -1,6 +1,6 @@
 # TP Adivina Quién
 
-Juego de consola en Java con un catálogo de 36 personajes. Cada partida selecciona
+Juego en Java con interfaz Swing y consola opcional, con un catálogo de 36 personajes. Cada partida selecciona
 23 personajes al azar, sin repetición, y conserva sus ID originales y el mismo
 mazo durante ambas fases. Los personajes se almacenan en una lista enlazada
 ordenada por género mediante MergeSort estable al preparar el mazo.
@@ -13,7 +13,10 @@ source/                  Código fuente del juego (.java)
     defaults/            Catálogo de personajes y selección del mazo
     datos/               Personajes, mazo, nodos y enumeraciones
     Funcionalidades/     Menú, partida, máquinas y tableros de candidatos
+    Controladores/       Coordinación de Swing, turnos e integración de estadísticas
+    GUI/                 Ventana, pantallas y componentes Swing
     Interfaces/          Contratos que implementan las clases
+resources/personajes/    Sprites PNG identificados por ID estable
 docs/                    Informe técnico en progreso y bitácora
 tests/                   Código fuente de las pruebas automatizadas (.java)
 build/                   Archivos compilados del juego y las pruebas (.class)
@@ -23,17 +26,21 @@ README.md                Descripción e instrucciones del proyecto
 
 | Carpeta | Responsabilidad y clases principales |
 |---|---|
-| `source/main` | `Main` inicia el programa y abre el menú de consola. |
+| `source/main` | `Main` abre Swing por defecto y la consola con `--consola`. |
 | `source/defaults` | `CatalogoPersonajes` define los 36 personajes, asigna sus ID en orden de incorporación y sortea los 23 de cada partida. |
 | `source/datos` | `Personaje` contiene los atributos de un personaje. `MazoPersonajes` administra la colección con una lista enlazada e índice por ID; también se reutiliza con capacidad 36 para construir el catálogo. `Nodo` es un elemento de esa lista. `Genero`, `ColorPelo` y `ModoJuego` enumeran las opciones disponibles. `Pregunta` define las preguntas y cómo evaluar cada una. |
 | `source/Funcionalidades` | `MenuConsola` permite elegir el modo de juego. `Partida` coordina la selección de secretos, los turnos y las fases. `Maquina1` y `Maquina2` usan `EstrategiaMaquina` para compartir los cálculos y la ejecución del turno con comportamientos diferentes. `TableroCandidatos` lleva los descartes de cada participante. `PartidaConsola` concentra la interacción de la partida por consola; el motor y las estrategias no leen ni imprimen. |
 | `source/Interfaces` | Define los métodos que deben ofrecer las implementaciones, por ejemplo `IPartida`, `IMaquina` e `ITableroCandidatos`. `IArbitroTurno` permite a las máquinas consultar respuestas y comprobar intentos sin recibir el personaje secreto rival. Estas interfaces son contratos de Java, no pantallas gráficas. |
-| `tests` | Contiene nueve programas de prueba que verifican personajes y mazos, entradas del jugador, protección de secretos, estrategias, segunda fase y registro de decisiones. Se ejecutan por separado del juego. |
+| `source/Controladores` | `ControladorJuego` solicita acciones al motor, programa turnos automáticos y registra resultados. Entrega a la vista un `EstadoVistaJuego` inmutable y conserva el historial con fase y ronda. |
+| `source/GUI` | `VentanaPrincipal` presenta las pantallas en una sola ventana. Los componentes dibujan cartas, preguntas e historial y delegan las acciones al controlador. |
+| `resources/personajes` | Los 36 PNG locales se cargan por ID (`01.png` a `36.png`), independientemente del nombre del personaje. |
+| `tests` | Programas de regresión para el motor, persistencia, controlador y presentación. Se ejecutan por separado del juego. |
 
-Al ejecutar el juego, `Main` abre `MenuConsola`. El menú crea un adaptador
-`PartidaConsola`, que solicita acciones al motor `Partida`. El motor obtiene
+Al ejecutar el juego, `Main` crea la ventana y `ControladorJuego`, que conecta
+la vista con `Partida` y `ServicioEstadisticas`. Con `--consola`, abre
+`MenuConsola` y el adaptador `PartidaConsola`. El motor obtiene
 el mazo de `CatalogoPersonajes`, controla turnos y fases y devuelve los resultados
-que la consola presenta. Las preguntas filtran el tablero correspondiente.
+que cada presentación muestra. Las preguntas filtran el tablero correspondiente.
 
 El **catálogo** contiene todos los personajes definidos; el **mazo** contiene los
 23 elegidos para esa partida; cada **tablero** registra cuáles de esos personajes
@@ -42,7 +49,8 @@ personajes del catálogo ni del mazo.
 
 ## Compilar y ejecutar
 
-Se necesita un JDK con los comandos `javac` y `java` disponibles. Ejecutar desde
+Se necesita un JDK 17 o posterior con los comandos `javac` y `java` disponibles.
+La interfaz requiere un entorno gráfico. Ejecutar desde
 la carpeta raíz del repositorio en PowerShell:
 
 ```powershell
@@ -58,6 +66,12 @@ fuente del juego y las pruebas, los compilan y abren el menú principal.
 `-encoding UTF-8` permite leer correctamente los acentos del código y
 `-Xlint:all` activa las advertencias del compilador.
 
+Para usar la consola: `java -cp build main.Main --consola`. Los sprites se buscan
+en `resources/personajes` desde la raíz del proyecto; también se admite cargar
+`/personajes/` desde el classpath. Por ejemplo, en Windows:
+`java -cp "build;resources" main.Main`. Si falta una imagen, se muestra la inicial
+del personaje y la partida sigue disponible. No se necesita conexión a Internet.
+
 ## Ejecutar las pruebas
 
 Después de compilar, ejecutar:
@@ -72,6 +86,10 @@ java -cp build Funcionalidades.DiagnosticoMaquinasRegressionTest
 java -cp build EstadisticasRegressionTest
 java -cp build ResultadosRegressionTest
 java -cp build MotorPartidaRegressionTest
+java -cp build RevelacionFinalRegressionTest
+java -cp build Controladores.ControladorJuegoRegressionTest
+java -cp build GUI.InterfazSwingRegressionTest
+java -cp build GUI.FlujoSwingRegressionTest
 ```
 
 | Prueba | Qué verifica |
@@ -85,9 +103,18 @@ java -cp build MotorPartidaRegressionTest
 | `EstadisticasRegressionTest` | Registro, UTF-8, recarga, duplicados, datos inválidos y reintento de guardado. |
 | `ResultadosRegressionTest` | Derrota en segunda fase, ambos ganadores de máquinas, resultado estable y nuevo UUID al reiniciar. |
 | `MotorPartidaRegressionTest` | Ausencia de entrada/salida en el motor, orden de acciones, consultas inmutables y rechazos sin cambios de estado. |
+| `RevelacionFinalRegressionTest` | Secreto rival inaccesible antes del resultado, ambos órdenes de segunda fase y protección después de reiniciar. |
+| `Controladores.ControladorJuegoRegressionTest` | Coordinación de acciones, cancelación de turnos, historial y persistencia asíncrona con reloj y tareas controlables. |
+| `GUI.InterfazSwingRegressionTest` | Recursos por ID, cartas, selección, descartes, preguntas por categoría y razonamiento visible en espectador. Funciona sin pantalla. |
+| `GUI.FlujoSwingRegressionTest` | Eventos sobre la ventana real: ambos rivales, desafío, intento, resultado, reintento de guardado, pausa, velocidad y partida completa entre máquinas. Requiere entorno gráfico; no muestra la ventana ni usa estadísticas del usuario. |
 
 Cada programa muestra un mensaje `PASS` si termina correctamente. Una condición
 incumplida produce un error de prueba.
+
+La prueba de ventana puede guardar capturas de los componentes reales con
+`java -cp build GUI.FlujoSwingRegressionTest data/validacion-swing`. Esa carpeta
+está excluida de Git junto con los datos locales. Si no hay entorno gráfico,
+esa prueba informa `SKIP`; el resto puede ejecutarse igualmente.
 
 ## Reglas actuales de personajes y turnos
 
@@ -160,8 +187,8 @@ un temporal y reemplazo atómico: si el sistema no lo admite, informa el fallo.
 El resultado sigue disponible para reintentar. Se admite una instancia local;
 no hay coordinación de escrituras entre procesos.
 
-La conexión del servicio al menú, la captura de usuario y la presentación del
-marcador quedan para Swing. **La consola actual produce el resultado, pero no
+Swing captura el usuario, consulta los marcadores y guarda automáticamente una
+partida al finalizar. **La consola produce el resultado, pero no
 lo guarda automáticamente.** El servicio se puede usar así después de terminar:
 
 ```java
@@ -179,7 +206,7 @@ pedido del usuario. No se realizaron mediciones de rendimiento.
 `Partida` implementa `IPartida` sin depender de `Scanner`, `System.in/out`,
 Swing ni del servicio de estadísticas. `PartidaConsola` interpreta entradas,
 invoca operaciones y muestra resultados: reúne los roles de controlador y vista
-para la consola. La futura interfaz Swing podrá usar el mismo motor.
+para la consola. La interfaz Swing usa el mismo motor.
 
 | Estado | Operaciones que permiten avanzar |
 |---|---|
@@ -232,5 +259,45 @@ y las decisiones de cada máquina.
 
 La consola puede detenerse por fin de entrada sin inventar un resultado; el
 adaptador permite continuar la instancia en memoria mediante `continuar()`.
-Esto no guarda partidas incompletas en disco. La integración de estadísticas,
-la captura de usuario y las ventanas siguen previstas para el paso 5.
+Esto no guarda partidas incompletas en disco.
+
+## Interfaz Swing e integración (paso 5)
+
+El menú permite ingresar un nombre, consultar su marcador y elegir entre humano
+contra Máquina 1, humano contra Máquina 2 o espectador. El marcador global muestra
+partidas totales y victorias separadas de cada máquina. Antes de jugar, el humano
+elige su secreto o pide uno aleatorio.
+
+Las cartas conservan su posición al descartarse. Sus atributos aparecen al pasar
+el cursor o recibir foco con el teclado. Seleccionar una carta habilita
+`Arriesgar`; el intento se ejecuta al pulsar ese botón. Las preguntas se agrupan
+por Género, Pelo, Lentes, Barba y Diente: seleccionar categoría o pregunta no
+consume turno; `Preguntar` ejecuta la acción. Las preguntas usadas se deshabilitan
+hasta la siguiente fase.
+
+En partidas humanas el rival avanza automáticamente tras una pausa breve. A la
+derecha, debajo del secreto propio, una miniatura muestra los 23 personajes entre
+los que la máquina busca tu secreto: mantiene las posiciones y marca en gris con una
+cruz los descartados. El cursor permite consultar nombre, ID y atributos. Al pasar
+a la segunda fase refleja los candidatos heredados por la nueva máquina.
+El historial queda debajo, más compacto y con desplazamiento; resume las acciones
+y permite ampliar el razonamiento. En espectador
+hay dos tableros, secretos visibles y razonamiento completo de ambas máquinas,
+con pausa, velocidad y avance de un turno mientras está pausado.
+
+La ventana utiliza fondo celeste pastel, acentos celeste, amarillo y rosa,
+cartas compactas con desplazamiento vertical y efectos breves. No incluye sonido.
+La referencia es 1366 × 768 y se puede redimensionar. Los sprites proporcionados
+se conservaron sin alterar sus bytes; el archivo original de Gael, rotulado 23,
+se asocia al ID 22 del catálogo. Pablito Lescano conserva el ID 23.
+
+Abandonar una partida exige confirmación y no suma estadísticas. La decisión
+pendiente de segunda fase tampoco registra un resultado. Al terminar se revela
+el secreto del rival actual mediante una consulta permitida solo en ese estado.
+El guardado se realiza fuera del hilo gráfico; mientras está pendiente se espera
+su finalización antes de salir. Ante un error se puede reintentar o salir sin
+guardar con confirmación. El UUID evita contar dos veces el mismo resultado.
+
+El controlador cancela los avisos de máquina al pausar o navegar y descarta
+respuestas atrasadas de consultas de estadísticas. La vista recibe copias
+inmutables; no calcula probabilidades ni modifica los tableros del motor.

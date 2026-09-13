@@ -303,6 +303,16 @@ public class Partida implements IPartida {
     }
 
     @Override
+    public Personaje getSecretoRivalFinal() {
+        exigirEstado(EstadoPartida.FINALIZADA);
+        if (modoActual != ModoJuego.JUGADOR_VS_MAQUINA_1
+                && modoActual != ModoJuego.JUGADOR_VS_MAQUINA_2) {
+            throw new IllegalStateException("La revelación final solo está disponible en modos humanos");
+        }
+        return secretoDe(rivalActual);
+    }
+
+    @Override
     public List<Personaje> getPersonajes() {
         if (mazo == null) { return List.of(); }
         List<Personaje> personajes = new ArrayList<>();

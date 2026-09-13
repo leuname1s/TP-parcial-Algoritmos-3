@@ -33,6 +33,8 @@ public interface IPartida {
     Personaje getPersonajeJugador();
     /** Solo disponible en modo espectador; rechaza consultas en modos humanos. */
     Personaje getSecretoEspectador(Participante participante);
+    /** Solo revela el secreto del rival actual al finalizar una partida humana. */
+    Personaje getSecretoRivalFinal();
     /** Las colecciones consultadas son copias inmutables del momento de la consulta. */
     List<Personaje> getPersonajes();
     List<Personaje> getCandidatos(Participante participante);

@@ -113,3 +113,85 @@ pendientes para Swing. No se realizaron commits ni publicación remota.
 Herramientas: asistencia de Codex, PowerShell con escritura UTF-8 explícita,
 apply_patch, javac, java y consultas de Git. La revisión final no detectó errores
 de espacios en el diff; las verificaciones no requieren dependencias nuevas.
+
+## 2026-09-12 - Paso 5: implementación e integración de Swing
+
+El usuario aprobó la implementación después de revisar el flujo y el boceto.
+Al retomar una interrupción se conservaron los cambios útiles del controlador,
+la consulta final de secreto y los componentes visuales iniciados, y se continuó
+la integración sobre ellos.
+
+Decisiones de interfaz aprobadas:
+
+- Una ventana con pantallas internas, Swing por defecto y consola con `--consola`.
+- Fondo celeste pastel, paleta `#a6e1ff`, `#fff2b2` y `#b3747e`, cartas compactas
+  y desplazamiento vertical. Los atributos se consultan al pasar el puntero o
+  enfocar una carta; el intento seleccionado se ejecuta sin otra confirmación.
+- Preguntas agrupadas por atributo, con acción explícita de preguntar y bloqueo
+  de preguntas repetidas según el estado del motor.
+- Tablero propio y resumen rival en modo humano. Dos tableros, secretos visibles
+  y razonamiento expuesto en modo espectador, con pausa, velocidad y siguiente turno.
+- Transiciones sencillas, sin sonido. Integración de los sprites locales aportados
+  por el usuario, en lugar de los placeholders planteados inicialmente.
+- Confirmación de abandono, resultado con secreto rival revelado y reintento o
+  salida confirmada sin guardar cuando falla la persistencia.
+
+Implementación:
+
+- `ControladorJuego` conecta `IPartida`, `IVistaJuego` y `ServicioEstadisticas`.
+  La GUI recibe instantáneas inmutables; el historial captura fase y ronda antes
+  de cada transición. Las decisiones y fórmulas permanecen en el motor.
+- El EDT atiende la interacción y un temporizador de una ejecución avanza las
+  máquinas. Los tokens invalidan eventos cancelados, incluso si ya estaban
+  encolados. La navegación cancela el reloj antes de abrir un diálogo modal.
+- Un ejecutor de un solo hilo serializa el acceso al archivo fuera del EDT.
+  Cada guardado conserva usuario, resultado y sesión; las consultas obsoletas y
+  las respuestas posteriores al cierre se descartan. Se mantiene la deduplicación
+  por UUID y las partidas incompletas no se registran.
+- `getSecretoRivalFinal` permite revelar el objetivo actual solo después de una
+  partida humana finalizada. Se conservan las protecciones del modo espectador.
+- Los recursos se organizan por ID estable en `resources/personajes`. Se preservan
+  los originales y se resuelve expresamente la numeración del sprite de Gael
+  como ID 22, manteniendo a Pablito Lescano como ID 23.
+- Se documentan las responsabilidades reales de cada capa, el manejo de errores
+  y los costos de instantáneas, historial y persistencia. El paso 2 permanece
+  omitido por decisión del usuario, sin nuevas mediciones ni cambios de reglas.
+
+Verificación realizada:
+
+- Compilación `--release 17`, UTF-8 y `-Xlint:all`, sin errores ni advertencias.
+  Ejecución con JDK 25 de trece regresiones: nueve originales y cuatro nuevas
+  para revelación final, controlador y Swing.
+- Casos de cancelación de turnos, pausa, velocidad, ambas segundas fases, snapshots,
+  guardado/reintento idempotente, errores de lectura y respuestas tardías.
+- Eventos de botones en una ventana real creada en el EDT, pintada sin mostrarla
+  y con estadísticas en memoria. Capturas de menú, selección, partida, desafío,
+  resultados, espectador y error de guardado; revisión adicional del tamaño mínimo.
+- Correcciones surgidas de la revisión: grilla sin estirar cartas ni perder columnas
+  al redimensionar, texto del menú sin recortes y descripción precisa de la
+  estrategia de Máquina 1. El espectador mantiene el razonamiento expuesto.
+- SHA-256 idéntico de los 36 sprites y carga desde carpeta y classpath; validación
+  UTF-8, entrada de consola, manejo de ejecución sin pantalla y `git diff --check`.
+
+Las pruebas no escribieron estadísticas del usuario. No se agregaron dependencias
+ni se realizaron commits o publicaciones remotas.
+
+Herramientas: asistencia de Codex, PowerShell con lectura UTF-8 explícita,
+apply_patch y consultas de Git. La implementación utiliza la biblioteca estándar
+de Java y recursos locales.
+
+## 2026-09-13 - Miniatura de candidatos del rival
+
+Se aprobó conservar el secreto propio arriba, incorporar la miniatura en el medio
+y reducir el historial debajo, manteniendo su desplazamiento y el razonamiento
+ampliable. `PanelMiniTablero` presenta los 23 retratos en seis columnas, con gris
+y cruz para descartados, posiciones estables y datos consultables con el cursor.
+Se actualiza desde los candidatos del rival actual de la instantánea, incluidos
+los heredados en la segunda fase. No requiere cambios en el motor o controlador.
+
+Pasaron la compilación completa con UTF-8, `--release 17` y `-Xlint:all`, las dos
+regresiones Swing y la regresión del controlador. Se comprobaron ambos rivales,
+los descartes tras cada tipo de turno, la segunda fase y una nueva partida.
+Se revisaron las capturas a 1366 × 768 y 980 × 660; para conservar espacio legible
+en el historial mínimo se quitó una línea de estado repetida en la cabecera.
+Las pruebas usaron estadísticas en memoria. Se preservaron los cambios previos.

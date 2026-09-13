@@ -66,8 +66,8 @@ c = 36 y n = 23.
 
 MergeSort se adapta a listas enlazadas, es estable y garantiza O(n log n) incluso
 con muchas claves de género iguales. No hace falta incorporar también QuickSort.
-No se afirma una mejora de tiempo para n = 23 antes de la comparación experimental
-del paso 2.
+El paso 2 de comparación experimental fue omitido por decisión del usuario.
+No se afirma una mejora medida de tiempo para n = 23.
 
 ## Verificación
 
@@ -80,9 +80,6 @@ el comportamiento existente del juego.
 
 ## Trabajo pendiente del informe
 
-- Paso 2: comparación reproducible con un ordenamiento cuadrático sobre copias
-  de los mismos 23 personajes en el mismo orden inicial, con medición aislada,
-  calentamiento y muestras repetidas.
 - Explicar las políticas voraces (Greedy) de selección de preguntas y los límites
   de su optimización local.
 - Completar UML, etapas posteriores, capturas de evidencia, bibliografía,
@@ -113,8 +110,9 @@ No se resuelve concurrencia entre procesos ni recuperación de partidas en curso
 El registro crece con las partidas: carga, consulta y guardado cuestan O(r) en
 cantidad de registros (y espacio proporcional al tamaño del archivo).
 
-La integración visual y la captura de usuario quedan para Swing. La consola no
-invoca automáticamente el servicio. Las pruebas ejercitan directamente la API.
+La integración visual y la captura de usuario se incorporan en el paso 5.
+La consola no invoca automáticamente el servicio. Las pruebas de persistencia
+ejercitan directamente la API.
 
 Paso 2: omitido por decisión del usuario; los pendientes de comparación experimental
 anteriores quedan fuera del alcance actual, sin mediciones ni afirmaciones nuevas.
@@ -154,7 +152,8 @@ y estado. Al terminar se rechazan nuevas acciones y se conserva el mismo resulta
 `IPartida` expone acciones individuales y consultas. Las consultas de colecciones
 devuelven copias inmutables; no permiten descartar personajes ni modificar
 preguntas por fuera de las reglas. El secreto humano sigue consultable por su
-propia vista; los secretos de máquinas solo se consultan en modo espectador.
+propia vista; durante una partida humana no se puede consultar el secreto rival.
+El paso 5 agrega una consulta permitida únicamente al finalizar ese modo.
 `IArbitroTurno` conserva la frontera entre estrategias y secreto rival.
 
 `ResultadoTurno` distingue pregunta/respuesta de intento/acierto y conserva los
@@ -167,7 +166,7 @@ a invocar la estrategia. El turno único, el riesgo y el desempate no cambian.
 Se sustituyen el constructor que recibía `Scanner`, el bucle `jugar()` del motor
 y las consultas que exponían objetivos o tableros modificables. Las pruebas de
 partida usan la API pública y fuentes aleatorias reproducibles, sin reflexión
-sobre campos privados. La interfaz gráfica queda para el paso siguiente.
+sobre campos privados. El paso 5 utiliza estos contratos para la interfaz gráfica.
 
 ### Complejidad del motor
 
@@ -202,3 +201,118 @@ leer y captura ambas salidas para detectar dependencias de consola durante las
 operaciones. Las pruebas de diagnóstico conservan la comparación sobre 22.000
 tableros y validan los datos anteriores al filtrado y su presentación sin repetir
 sorteos. Las 1.440 búsquedas ejercitan ambas estrategias con y sin herencia.
+
+## Paso 5: implementación e integración de Swing
+
+### Responsabilidades y navegación
+
+`Main` abre Swing por defecto mediante el hilo de eventos (EDT); `--consola`
+conserva el adaptador anterior. `VentanaPrincipal` presenta una sola ventana con
+pantallas internas para menú, selección, partida, decisión de segunda fase y
+resultado. El menú captura el usuario y muestra sus estadísticas y el marcador
+global de partidas entre máquinas.
+
+La separación MVC se sostiene por las dependencias: `Partida`, tableros y
+estrategias resuelven las reglas; `ControladorJuego` coordina acciones, navegación,
+temporización y persistencia; la GUI dibuja datos y entrega las acciones del
+usuario al controlador. `IVistaJuego` define las actualizaciones y consultas que
+el controlador dirige a la vista. Esta recibe `EstadoVistaJuego`, sin acceso al
+motor ni a sus tableros modificables. Las colecciones de cada instantánea son
+copias inmutables. `TurnoRegistrado` conserva fase y ronda anteriores a ejecutar
+la acción, incluso cuando esta cambia de fase o finaliza la partida.
+
+El controlador consulta `getSecretoRivalFinal` solo al terminar una partida
+humana. El motor rechaza esa consulta en cualquier estado anterior y en modo
+espectador; en este último se mantiene la consulta de ambos secretos ya existente.
+La revelación no cambia reglas, candidatos, turnos ni el resultado definitivo.
+
+### Hilo de eventos, pausas y guardado
+
+Los eventos de Swing y las acciones del motor se coordinan en el EDT. Un
+`javax.swing.Timer` de una ejecución introduce la pausa breve de la máquina en
+modo humano.
+En modo espectador se agregan pausa, velocidad y avance de un turno mientras está
+pausado. Cada programación lleva un token: cancelar invalida también un evento
+que ya estaba en la cola. Antes de confirmar una salida se cancela el reloj para
+evitar que la partida avance dentro del bucle de eventos del diálogo modal.
+Si se cancela la salida, se vuelve a programar cuando corresponde.
+
+Las lecturas y escrituras de estadísticas usan un ejecutor de un solo hilo fuera
+del EDT. Esto serializa las operaciones de archivo de esta ventana y evita
+bloquear la interacción; no incorpora coordinación entre procesos. Las respuestas
+se entregan nuevamente al EDT. Un identificador de consulta descarta estadísticas
+que llegan después de cambiar de usuario; los identificadores de sesión y la
+marca de cierre impiden aplicar respuestas a una partida posterior o cerrada.
+
+Solo se registra `ResultadoPartida` al finalizar: abandonar o dejar pendiente la
+decisión de segunda fase no cuenta una partida. El guardado captura resultado,
+usuario y sesión, y conserva la deduplicación por UUID del servicio. Mientras se
+guarda se evita cerrar la ventana; ante un error se informa la causa y se permite
+reintentar o confirmar una salida sin guardar. Los errores de consulta se muestran
+como errores, sin presentar contadores cero como si la lectura hubiera sido válida.
+
+### Presentación aprobada y recursos
+
+La referencia es una ventana de 1366 × 768 adaptable, con fondo celeste pastel
+`#e4f4ff`, acentos `#a6e1ff`, `#fff2b2` y `#b3747e`, superficies blancas y texto
+oscuro. Se utilizan cartas compactas con desplazamiento vertical; no se exige
+mostrar los 23 personajes simultáneamente. Los atributos aparecen al pasar el
+puntero o enfocar la carta con el teclado. Las cartas descartadas conservan su
+posición, con imagen atenuada y estado explícito. Seleccionar una carta prepara
+el intento; `Arriesgar` lo ejecuta sin una confirmación adicional.
+
+Las preguntas se agrupan por Género, Pelo, Lentes, Barba y Diente. Elegir categoría
+o pregunta no consume turno: se ejecuta con `Preguntar`. Las preguntas realizadas
+se deshabilitan y vuelven a estar disponibles cuando el motor reinicia la fase.
+En modo humano se muestra el tablero propio y, a la derecha, el secreto propio,
+una miniatura de los candidatos del rival y el historial compacto con desplazamiento
+y razonamiento ampliable. `PanelMiniTablero` dibuja seis columnas de retratos sin
+acciones de selección; los descartados mantienen su lugar en gris y con una cruz.
+Nombre, ID, atributos y estado se consultan al pasar el cursor. La vista utiliza
+`EstadoVistaJuego.candidatosDe(estado.rival())`, por lo que presenta la herencia
+de candidatos al cambiar de rival en la segunda fase sin repetir lógica del motor.
+El espectador dispone de dos tableros lado a lado, ambos secretos y razonamiento
+visible en el historial compartido. Las transiciones son sencillas y no se
+incorpora sonido.
+
+Los 36 sprites suministrados se cargan localmente desde `resources/personajes`,
+con nombres normalizados por ID (`01.png` a `36.png`) y alternativa de carga desde
+el classpath. La asociación no depende del nombre visible del personaje: el
+archivo original de Gael, rotulado con 23, corresponde al ID 22 del catálogo;
+Pablito Lescano conserva el ID 23. Los originales se preservan. La interfaz no
+requiere acceso a DiceBear ni otras llamadas de red al ejecutar el juego.
+
+### Costo de la integración
+
+Con n personajes, p preguntas y h acciones registradas, construir una instantánea
+copia O(n + p + h) referencias y datos de conjuntos. El historial conserva los
+diagnósticos ya calculados, de hasta O(p) por acción de máquina, por lo que ocupa
+O(h·p). Reconstruir tableros e historial completo con esos diagnósticos cuesta
+O(n + h·p), aparte de la carga y el dibujo de imágenes. No se vuelve a ejecutar
+la estrategia para presentar su razonamiento. Los participantes y las categorías
+son una cantidad fija; el juego actual utiliza n = 23 y p = 9.
+
+El acceso a estadísticas mantiene el costo O(r) del registro persistido. Sacarlo
+del EDT mejora la capacidad de respuesta de la ventana, sin alterar ese costo
+algorítmico ni agregar mediciones experimentales.
+
+### Verificación del paso 5
+
+La compilación con `javac --release 17 -encoding UTF-8 -Xlint:all` finalizó sin
+errores ni advertencias; las ejecuciones se realizaron con JDK 25. Pasaron los
+trece programas de regresión: nueve existentes y cuatro nuevos para revelación
+final, controlador, componentes Swing y flujos de la ventana.
+
+Las pruebas verifican eventos cancelados incluso dentro de una confirmación,
+pausa/paso/velocidad, ambos órdenes de segunda fase, historial anterior a cada
+transición, secreto final protegido, consultas inmutables, respuestas obsoletas,
+abandono sin cómputo y errores/reintentos de guardado sin duplicar resultados.
+La ventana real se creó y pintó desde el EDT sin mostrarla, con controles activados
+por eventos y repositorio en memoria. Se revisaron capturas de menú, selección,
+partida humana, desafío, resultado, espectador y error de guardado; también la
+distribución de la partida en el tamaño mínimo de 980 × 660.
+
+Los 36 recursos cargan desde la carpeta local y desde el classpath; se verificó
+que sus SHA-256 coinciden con los originales. La entrada `--consola` permite
+abrir y cerrar el menú, y la entrada sin entorno gráfico informa cómo usarla.
+Se validaron UTF-8 y `git diff --check`. No se realizaron mediciones de rendimiento.
