@@ -316,3 +316,43 @@ Los 36 recursos cargan desde la carpeta local y desde el classpath; se verificó
 que sus SHA-256 coinciden con los originales. La entrada `--consola` permite
 abrir y cerrar el menú, y la entrada sin entorno gráfico informa cómo usarla.
 Se validaron UTF-8 y `git diff --check`. No se realizaron mediciones de rendimiento.
+
+## Verificación integral (paso 6)
+
+Verificación del 13/09/2026 sobre el proyecto integrado, con los dos ajustes de
+usuario solicitados. La compilación con `javac --release 17 -encoding UTF-8
+-Xlint:all` terminó sin errores ni advertencias, ejecutada con JDK 25.0.4.
+Pasaron los catorce programas de regresión del README, incluida la prueba de
+ventana real (sin omisión por entorno gráfico).
+
+Se verificaron catálogo, ID y MergeSort estable, entradas inválidas sin consumo
+de turno, protección de secretos, reglas y resultados de ambas fases, persistencia
+por UUID, reintentos, cancelación de eventos y respuestas tardías, y flujos de
+Swing para ambos rivales y espectador. Las regresiones incluyen 100 partidas
+entre máquinas, 1.440 búsquedas y decisiones sobre 22.000 tableros.
+
+El marcador compara nombres con `equalsIgnoreCase`, tanto al consultar como al
+comprobar duplicados. Reúne las variantes de mayúsculas de registros antiguos
+sin migrar ni reescribir el historial, conserva los acentos y mantiene separados
+los contadores de máquinas. El costo sigue siendo lineal en el tamaño del registro.
+
+`UsuarioArchivo` guarda el último nombre en UTF-8 mediante un temporal y reemplazo
+atómico en `data/usuario.txt`. `Main` conecta esa preferencia con la ventana; el
+motor no participa. Se conserva la escritura del nombre elegida por el usuario.
+Las pruebas verificaron recarga, cambio, campo vacío, errores de archivo y que el
+evento de cierre entrega el texto recién editado, aunque no se haya iniciado una
+partida ni consultado el marcador. Los errores se informan; una lectura fallida
+impide sobrescribir el archivo. El guardado ocurre al cierre normal, no ante la
+terminación forzada del proceso. La lectura y escritura de esta preferencia breve
+se realizan al abrir/cerrar; las estadísticas mantienen su ejecución en segundo plano.
+
+Se generaron nueve capturas de componentes reales en `data/validacion-paso6` y
+se inspeccionaron visualmente menú, partida humana y tamaño mínimo. Se comprobó
+la salida de consola, el mensaje sin entorno gráfico, los argumentos inválidos,
+la correspondencia entre paquetes y rutas, UTF-8 y `git diff --check`.
+La ejecución fue sobre JDK 25 con compatibilidad de compilación Java 17; no se
+ejecutó una JVM 17 ni se realizó una prueba manual prolongada. Las pruebas usaron
+archivos temporales o repositorios en memoria, sin modificar estadísticas locales.
+
+No se detectaron fallos en las comprobaciones realizadas. El cierre de informe,
+UML y entrega corresponde al paso 7; el paso 2 continúa omitido por decisión del usuario.

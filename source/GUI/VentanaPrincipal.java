@@ -84,9 +84,15 @@ public final class VentanaPrincipal extends JFrame implements IVistaJuego {
     private EstadoVistaJuego estado;
     private String pantallaActual = "";
     private boolean actualizando;
+    private final java.util.function.Consumer<String> alCerrar;
 
     public VentanaPrincipal() {
+        this(nombre -> { });
+    }
+
+    public VentanaPrincipal(java.util.function.Consumer<String> alCerrar) {
         super("Adivina Quién");
+        this.alCerrar = java.util.Objects.requireNonNull(alCerrar);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setMinimumSize(new Dimension(980, 660));
         setSize(1366, 768);
@@ -460,6 +466,7 @@ public final class VentanaPrincipal extends JFrame implements IVistaJuego {
     }
 
     @Override public void cerrar() {
+        alCerrar.accept(usuario.getText());
         cancelarEfectos();
         dispose();
     }

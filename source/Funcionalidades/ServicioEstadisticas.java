@@ -25,7 +25,10 @@ public final class ServicioEstadisticas {
         String clave = resultado.getId().toString();
         String valor = resultado.getModo().name() + "|" + resultado.getDesenlace().name() + "|" + nombre;
         if (registro.containsKey(clave)) {
-            if (!valor.equals(registro.getProperty(clave))) {
+            String[] anterior = registro.getProperty(clave).split("\\|", 3);
+            if (!anterior[0].equals(resultado.getModo().name())
+                    || !anterior[1].equals(resultado.getDesenlace().name())
+                    || !nombre.equalsIgnoreCase(anterior[2])) {
                 throw new IllegalArgumentException("La partida ya está registrada con otros datos");
             }
             return false;
@@ -46,7 +49,7 @@ public final class ServicioEstadisticas {
             if (clave.equals("version")) { continue; }
             String[] datos = registro.getProperty(clave).split("\\|", 3);
             boolean maquinas = datos[0].equals(ModoJuego.MAQUINA_1_VS_MAQUINA_2.name());
-            if (usuario == null ? !maquinas : maquinas || !usuario.equals(datos[2])) { continue; }
+            if (usuario == null ? !maquinas : maquinas || !usuario.equalsIgnoreCase(datos[2])) { continue; }
             total++;
             switch (Desenlace.valueOf(datos[1])) {
                 case VICTORIA_VERDADERA: verdaderas++; victorias++; break;

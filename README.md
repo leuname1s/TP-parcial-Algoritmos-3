@@ -84,6 +84,7 @@ java -cp build SecretosRegressionTest
 java -cp build Funcionalidades.EstrategiasPartidaRegressionTest
 java -cp build Funcionalidades.DiagnosticoMaquinasRegressionTest
 java -cp build EstadisticasRegressionTest
+java -cp build UsuarioArchivoRegressionTest
 java -cp build ResultadosRegressionTest
 java -cp build MotorPartidaRegressionTest
 java -cp build RevelacionFinalRegressionTest
@@ -101,6 +102,7 @@ java -cp build GUI.FlujoSwingRegressionTest
 | `Funcionalidades.EstrategiasPartidaRegressionTest` | Los límites de riesgo, los descartes heredados, las preguntas adaptativas, los desempates, una acción por turno y la segunda fase con 14/15 descartes, rechazo del desafío y derrota inicial. |
 | `Funcionalidades.DiagnosticoMaquinasRegressionTest` | La selección equilibrada en 22.000 tableros, incluidos casos de pelo rubio con división 5/18, y el registro de comparación de preguntas, desempates y riesgo de ambas máquinas. |
 | `EstadisticasRegressionTest` | Registro, UTF-8, recarga, duplicados, datos inválidos y reintento de guardado. |
+| `UsuarioArchivoRegressionTest` | Último nombre, recarga, cambios de mayúsculas, UTF-8, campo vacío y errores de archivo. |
 | `ResultadosRegressionTest` | Derrota en segunda fase, ambos ganadores de máquinas, resultado estable y nuevo UUID al reiniciar. |
 | `MotorPartidaRegressionTest` | Ausencia de entrada/salida en el motor, orden de acciones, consultas inmutables y rechazos sin cambios de estado. |
 | `RevelacionFinalRegressionTest` | Secreto rival inaccesible antes del resultado, ambos órdenes de segunda fase y protección después de reiniciar. |
@@ -175,8 +177,10 @@ Las partidas incompletas no tienen resultado registrable.
 `ServicioEstadisticas` registra resultados y permite consultar usuarios o máquinas.
 `RepositorioEstadisticasArchivo` usa `data/estadisticas.properties` por defecto;
 su constructor acepta otra ruta. Solo requiere la biblioteca estándar de Java.
-Los nombres se recortan en los extremos, no pueden estar vacíos y distinguen
-mayúsculas. No hay autenticación de usuarios.
+Los nombres se recortan en los extremos, no pueden estar vacíos y no distinguen
+mayúsculas: `bruno`, `Bruno` y `BRUNO` comparten marcador. Esto también reúne los
+registros anteriores sin reescribirlos; los acentos siguen siendo significativos.
+No hay autenticación de usuarios.
 
 El archivo UTF-8 conserva una entrada por identificador de partida y los contadores
 se calculan al consultar. Un registro idéntico devuelve `false` sin incrementar;
@@ -267,6 +271,13 @@ El menú permite ingresar un nombre, consultar su marcador y elegir entre humano
 contra Máquina 1, humano contra Máquina 2 o espectador. El marcador global muestra
 partidas totales y victorias separadas de cada máquina. Antes de jugar, el humano
 elige su secreto o pide uno aleatorio.
+
+Al cerrar normalmente la ventana se conserva el último nombre en
+`data/usuario.txt`, separado de las estadísticas. Al abrir vuelve a aparecer con
+las mayúsculas elegidas y se consulta su marcador. También se recuerda un cambio
+escrito en el menú sin consultar ni jugar; borrar el campo hace que vuelva vacío.
+Ante un error de lectura o escritura se muestra un aviso. Si la lectura falla,
+se conserva el archivo anterior. Un cierre forzado del proceso no guarda el cambio.
 
 Las cartas conservan su posición al descartarse. Sus atributos aparecen al pasar
 el cursor o recibir foco con el teclado. Seleccionar una carta habilita

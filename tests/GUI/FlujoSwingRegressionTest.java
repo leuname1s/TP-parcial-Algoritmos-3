@@ -49,8 +49,28 @@ public final class FlujoSwingRegressionTest {
             probarHumano(ModoJuego.JUGADOR_VS_MAQUINA_1, capturas);
             probarHumano(ModoJuego.JUGADOR_VS_MAQUINA_2, null);
             probarEspectador(capturas);
+            probarUsuarioAlCerrar();
         });
         System.out.println("PASS: ventana Swing, ambos rivales, segunda fase, resultado y controles de espectador");
+    }
+
+    private static void probarUsuarioAlCerrar() {
+        String[] guardado = {null};
+        VentanaPrincipal ventana = new VentanaPrincipal(nombre -> guardado[0] = nombre);
+        ControladorJuego controlador = new ControladorJuego(new Partida(),
+                new ServicioEstadisticas(new Memoria()), ventana, new Reloj(), Runnable::run, Runnable::run);
+        try {
+            ventana.conectar(controlador);
+            controlador.consultarEstadisticas("bruno");
+            JTextField campo = componentes(ventana, JTextField.class).get(0);
+            comprobar(campo.getText().equals("bruno"), "Mostrar usuario recuperado al abrir");
+            campo.setText("BRUNO");
+            ventana.dispatchEvent(new java.awt.event.WindowEvent(ventana,
+                    java.awt.event.WindowEvent.WINDOW_CLOSING));
+            comprobar("BRUNO".equals(guardado[0]), "Guardar el nombre editado sin consultar ni jugar");
+        } finally {
+            ventana.dispose();
+        }
     }
 
     private static void probarHumano(ModoJuego modo, Path capturas) {

@@ -195,3 +195,25 @@ los descartes tras cada tipo de turno, la segunda fase y una nueva partida.
 Se revisaron las capturas a 1366 × 768 y 980 × 660; para conservar espacio legible
 en el historial mínimo se quitó una línea de estado repetida en la cabecera.
 Las pruebas usaron estadísticas en memoria. Se preservaron los cambios previos.
+
+## 2026-09-13 — Paso 6: verificación integral y preferencias de usuario
+
+Se verificó el proyecto integrado y se aplicaron dos ajustes solicitados:
+marcador sin distinción de mayúsculas y recuperación del último usuario al abrir.
+La consulta reúne variantes ya guardadas; la deduplicación por UUID también
+acepta variaciones de mayúsculas sin sumar otra partida. No se migró el historial.
+El nombre se conserva en `data/usuario.txt`, con UTF-8 y reemplazo atómico,
+incluyendo cambios escritos en el menú sin jugar. Los errores se informan y una
+lectura fallida conserva el archivo anterior.
+
+Verificación realizada con PowerShell y JDK 25.0.4: compilación compatible con
+Java 17 y `-Xlint:all` sin advertencias, catorce regresiones aprobadas, salida de
+consola, entrada sin pantalla, argumentos inválidos, rutas de paquetes y UTF-8.
+Se ampliaron las pruebas de estadísticas y cierre Swing y se agregó una prueba
+del archivo de usuario. Se generaron nueve capturas y se inspeccionaron menú,
+partida humana y tamaño mínimo. El primer comando sin pantalla requirió citar
+el argumento `-D` para que PowerShell lo pasara correctamente; la repetición pasó.
+
+No se modificaron estadísticas locales ni recursos; no se agregaron dependencias.
+No se ejecutó en JVM 17 ni se probó un cierre forzado como mecanismo de guardado.
+El detalle y los límites están en el informe técnico. Paso 7 pendiente.

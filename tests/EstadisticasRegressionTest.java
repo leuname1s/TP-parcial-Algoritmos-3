@@ -21,15 +21,17 @@ public class EstadisticasRegressionTest {
             check(!servicio.registrar("José|uno", victoria), "Duplicado en sesión");
             servicio = new ServicioEstadisticas(new RepositorioEstadisticasArchivo(archivo));
             check(!servicio.registrar("José|uno", victoria), "Duplicado tras recarga");
+            check(!servicio.registrar("JOSÉ|UNO", victoria), "Duplicado con distintas mayúsculas");
             servicio.registrar("José|uno", resultado(Desenlace.VICTORIA_VERDADERA));
             servicio.registrar("José|uno", resultado(Desenlace.DERROTA));
             servicio.registrar("josé|uno", resultado(Desenlace.DERROTA));
             servicio.registrar(null, resultado(Desenlace.GANA_MAQUINA_1));
             servicio.registrar(null, resultado(Desenlace.GANA_MAQUINA_2));
             Estadisticas humano = servicio.consultarUsuario("José|uno");
-            check(humano.getPartidasTotales() == 3 && humano.getVictorias() == 2
+            check(humano.getPartidasTotales() == 4 && humano.getVictorias() == 2
                     && humano.getVictoriasVerdaderas() == 1, "Contadores humanos");
-            check(servicio.consultarUsuario("josé|uno").getPartidasTotales() == 1, "Usuarios independientes");
+            check(servicio.consultarUsuario("  JOSÉ|UNO  ").getPartidasTotales() == 4, "Mismo usuario sin distinguir mayúsculas");
+            check(servicio.consultarUsuario("Jose|uno").getPartidasTotales() == 0, "Conservar distinción de acentos");
             Estadisticas maquinas = servicio.consultarMaquinas();
             check(maquinas.getPartidasTotales() == 2 && maquinas.getVictoriasMaquina1() == 1
                     && maquinas.getVictoriasMaquina2() == 1, "Contadores globales");
