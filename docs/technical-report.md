@@ -66,8 +66,40 @@ c = 36 y n = 23.
 
 MergeSort se adapta a listas enlazadas, es estable y garantiza O(n log n) incluso
 con muchas claves de género iguales. No hace falta incorporar también QuickSort.
-El paso 2 de comparación experimental fue omitido por decisión del usuario.
-No se afirma una mejora medida de tiempo para n = 23.
+
+## Comparación experimental de ordenamientos
+
+Se completó el 2026-09-17 el requisito de la página 2 del PDF
+`Documentación para primer TP Programación III.pdf`: comparar el algoritmo
+elegido con uno cuadrático sobre la misma lista de 23 personajes.
+Se midió el MergeSort real del juego frente a Inserción estable sobre el mismo
+tipo de lista enlazada, con idénticos personajes y orden inicial para cada par.
+
+| Entrada de 23 personajes | MergeSort (ms) | Inserción (ms) |
+|---|---:|---:|
+| Mezclada | 0.000630920 | 0.000453800 |
+| Ordenada por género | 0.000479040 | 0.000482370 |
+| Invertida por género | 0.000541280 | 0.000272445 |
+
+Los valores son medianas de 30 promedios por tanda de 10.000 ordenamientos,
+tras 15 tandas de calentamiento por escenario. Se usaron 100 semillas fijas,
+copias nuevas y alternancia del algoritmo medido primero. La preparación y las
+verificaciones quedan fuera del cronómetro; el restablecimiento de la cola está
+incluido en ambos algoritmos. El entorno fue Windows 11, Intel Core i9-14900HX,
+OpenJDK 25.0.4 y heap fijo de 256 MB.
+
+Inserción tuvo una mediana menor en el caso mezclado, por 0.000177120 ms:
+una diferencia sin relevancia práctica perceptible para un único ordenamiento
+al iniciar la partida. Con n = 23 los costos constantes importan y O(n log n)
+no garantiza menor tiempo que O(n²). Además, solo hay dos claves distintas de
+género. Se conserva MergeSort por su adecuación a la lista, estabilidad,
+complejidad y aplicación de Divide y Conquista.
+
+Los tiempos varían entre tandas; no se afirma significación estadística ni
+superioridad universal a partir de un proceso de JVM. El
+[protocolo completo](experiments/README.md) documenta rangos, limitaciones,
+verificaciones y reproducción; el
+[CSV original](experiments/ordenamiento-2026-09-17.csv) conserva las 180 mediciones.
 
 ## Verificación
 
@@ -114,8 +146,9 @@ La integración visual y la captura de usuario se incorporan en el paso 5.
 La consola no invoca automáticamente el servicio. Las pruebas de persistencia
 ejercitan directamente la API.
 
-Paso 2: omitido por decisión del usuario; los pendientes de comparación experimental
-anteriores quedan fuera del alcance actual, sin mediciones ni afirmaciones nuevas.
+El paso 2 se había omitido durante esta etapa. La comparación de ordenamientos
+se completó posteriormente el 2026-09-17 y figura en su apartado específico;
+la justificación de Greedy sigue entre los pendientes del informe.
 
 ## Paso 4: motor por acciones y presentación de consola
 

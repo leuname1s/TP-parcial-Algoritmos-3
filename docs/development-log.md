@@ -217,3 +217,30 @@ el argumento `-D` para que PowerShell lo pasara correctamente; la repetición pa
 No se modificaron estadísticas locales ni recursos; no se agregaron dependencias.
 No se ejecutó en JVM 17 ni se probó un cierre forzado como mecanismo de guardado.
 El detalle y los límites están en el informe técnico. Paso 7 pendiente.
+
+## 2026-09-17 — Comparación experimental de ordenamientos
+
+Se retomó, por pedido del usuario, la comparación del paso 2 que se había omitido.
+Se agregó un ejecutable independiente en `experiments`, usando el MergeSort real
+del juego y una referencia por Inserción estable con el mismo tipo de nodo.
+No se modificaron el código de producción, las reglas, la interfaz ni los datos
+persistidos. Se utilizó Codex para implementar el experimento, ejecutar las
+comprobaciones y redactar la documentación a partir de las mediciones.
+
+Se compararon copias idénticas de listas de 23 personajes con 100 semillas, en
+orden mezclado, ordenado e invertido por género. Se separó la preparación del
+cronómetro, se calentó la JVM y se alternó el orden de ejecución. Se verificaron
+los resultados de cada lista y se guardaron 180 mediciones en CSV. La diferencia
+de medianas del caso mezclado favoreció a Inserción por 0.000177120 ms; no tiene
+relevancia práctica para iniciar una partida ni prueba superioridad universal.
+
+Pasaron la compilación de `source`, `tests` y `experiments` con `--release 17`,
+UTF-8 y `-Xlint:all`, la regresión de ordenamiento y las verificaciones del
+experimento, incluidos casos límite y 2.700.000 resultados de listas de 23.
+La consulta de CPU por CIM fue denegada; el modelo se obtuvo mediante lectura
+del registro de Windows. No se instalaron dependencias.
+
+El [protocolo y resultados](experiments/README.md) documenta entorno, rangos,
+limitaciones y comando de reproducción. Se actualizaron README e informe para
+reflejar el cierre de esta comparación; siguen pendientes los otros elementos
+del informe final, incluida la justificación de Greedy.

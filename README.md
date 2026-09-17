@@ -19,6 +19,7 @@ source/                  Código fuente del juego (.java)
 resources/personajes/    Sprites PNG identificados por ID estable
 docs/                    Informe técnico en progreso y bitácora
 tests/                   Código fuente de las pruebas automatizadas (.java)
+experiments/             Comparación reproducible de MergeSort e Inserción
 build/                   Archivos compilados del juego y las pruebas (.class)
 README.md                Descripción e instrucciones del proyecto
 .gitignore               Reglas para excluir archivos generados de Git
@@ -153,8 +154,11 @@ posteriormente, hay que volver a ordenar antes de recorrerla por género.
 El [informe técnico en progreso](docs/technical-report.md) registra la decisión,
 las estructuras, los contratos y las complejidades de este paso. La
 [bitácora](docs/development-log.md) registra el trabajo y el uso de herramientas.
-La comparación experimental con un algoritmo cuadrático corresponde al paso 2;
-no se afirma una ventaja de tiempo para solo 23 personajes sin medirla.
+La [comparación experimental con Inserción](docs/experiments/README.md) completa
+el requisito de tiempos sobre los mismos 23 personajes. Incluye protocolo,
+comando de reproducción y CSV de resultados. Para la entrada mezclada, las
+medianas fueron 0.000630920 ms con MergeSort y 0.000453800 ms con Inserción;
+la diferencia no tiene relevancia práctica para preparar una partida.
 
 ## Resultados y estadísticas (paso 3)
 
@@ -202,8 +206,8 @@ Estadisticas marcador = servicio.consultarUsuario("Ana");
 // Para modo máquina contra máquina: registrar(null, resultado) y consultarMaquinas().
 ```
 
-El paso 2 (comparación experimental y evidencia algorítmica) fue omitido por
-pedido del usuario. No se realizaron mediciones de rendimiento.
+La comparación de ordenamientos del paso 2 se completó el 2026-09-17.
+La justificación pendiente de Greedy se detalla en el informe técnico.
 
 ## Separación de lógica y presentación (paso 4)
 
