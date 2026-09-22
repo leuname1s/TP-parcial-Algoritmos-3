@@ -17,7 +17,7 @@ source/                  Código fuente del juego (.java)
     GUI/                 Ventana, pantallas y componentes Swing
     Interfaces/          Contratos que implementan las clases
 resources/personajes/    Sprites PNG identificados por ID estable
-docs/                    Informe técnico en progreso y bitácora
+docs/                    Informe técnico, UML, evidencias y bitácora
 tests/                   Código fuente de las pruebas automatizadas (.java)
 experiments/             Comparación reproducible de MergeSort e Inserción
 build/                   Archivos compilados del juego y las pruebas (.class)
@@ -207,7 +207,10 @@ Estadisticas marcador = servicio.consultarUsuario("Ana");
 ```
 
 La comparación de ordenamientos del paso 2 se completó el 2026-09-17.
-La justificación pendiente de Greedy se detalla en el informe técnico.
+El [informe técnico](docs/technical-report.md) incluye la justificación de Greedy,
+un contraejemplo verificable, UML de clases y ejemplos del código.
+También está disponible en [Word](docs/informe-tecnico.docx).
+Los aportes individuales y la reflexión del equipo quedan para completar.
 
 ## Separación de lógica y presentación (paso 4)
 

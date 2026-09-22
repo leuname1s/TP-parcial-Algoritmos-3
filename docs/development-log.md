@@ -244,3 +244,33 @@ El [protocolo y resultados](experiments/README.md) documenta entorno, rangos,
 limitaciones y comando de reproducción. Se actualizaron README e informe para
 reflejar el cierre de esta comparación; siguen pendientes los otros elementos
 del informe final, incluida la justificación de Greedy.
+
+## 2026-09-20 — Preparación del informe final
+
+Se reorganizó el informe por temas y se generó su versión Word, con Bruno Ramos,
+Camila Barral, Emmanuel Strah y Juan Bogado como integrantes. Por indicación del
+usuario, los aportes individuales y la reflexión personal quedan para completar.
+Se priorizan Divide y Conquista y Greedy y se mencionan MVC, estrategias
+polimórficas, Iterator y la frontera de persistencia, con ejemplos reales.
+
+Se agregaron tres vistas de UML de clases, fuentes DOT y figuras exportadas,
+fragmentos de código con líneas y dos capturas históricas de la validación del
+13/09. Se conservaron las seis medianas del experimento del 17/09, contrastadas
+con sus 180 mediciones. Un script documental verifica el contraejemplo de Greedy
+con ocho perfiles del catálogo: 3,25 preguntas promedio para la raíz equilibrada
+frente a 3,125 para una alternativa, sin riesgo ni rival y con candidatos
+equiprobables. No es un cambio de estrategia del juego.
+
+El usuario pidió revisar el Word en Google Drive. Se importó una copia nativa,
+se verificó el contenido y se revisaron las 16 páginas del PDF exportado: 14 de
+cuerpo y 2 de anexos. La revisión local mediante LibreOffice no estaba disponible;
+la validación visual corresponde al render de Google Docs, no a Microsoft Word.
+Se corrigió la atribución de la validación de versión y contenido al servicio,
+manteniendo sincronizadas las versiones. El puente de lectura auxiliar de Docs
+no aceptó rutas Windows; se usó lectura directa del conector y una sustitución
+exacta protegida por revisión para esa corrección.
+
+Herramientas: Codex para redacción y contraste, Python para fragmentos y Word,
+Graphviz para UML, Google Drive para conversión y Poppler para revisión visual.
+No se modificó producción ni se repitieron las regresiones históricas. No se
+realizaron commits, push ni cambios de permisos del documento.

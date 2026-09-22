@@ -1,391 +1,387 @@
-# Informe técnico en progreso
+# Informe técnico de Adivina Quién
 
-## Estructuras de datos y responsabilidades
+**Asignatura:** Diseño y Análisis de Algoritmos. **Docente:** López Juan Ignacio.
 
-- `CatalogoPersonajes` define 36 perfiles, los mezcla con Fisher–Yates y selecciona
-  23 sin repetición. Ordena el mazo seleccionado antes de devolverlo.
-- `MazoPersonajes` administra una lista simplemente enlazada con cabeza y cola,
-  un índice directo por ID y un índice de combinaciones de atributos que rechaza
-  perfiles duplicados.
-- `Nodo` contiene una referencia al personaje y el enlace siguiente. El
-  ordenamiento reutiliza los nodos.
-- `IMazoPersonajes` expone el agregado al final y el ordenamiento estable explícito.
-  La iteración oculta los nodos. Se debe ordenar después de cargar y antes de crear
-  un iterador; los iteradores existentes no deben usarse tras cambios estructurales.
-- Los tableros de candidatos y la selección de secretos utilizan el mazo preparado
-  como antes.
+**Integrantes:** Bruno Ramos, Camila Barral, Emmanuel Strah y Juan Bogado.
 
-El catálogo conserva el orden de declaración. Sus entradas actuales ya están
-agrupadas por género; no se ordena por inserción ni se vuelve a ordenar el catálogo.
+**Estado:** contenido técnico para revisión. Los aportes individuales y la reflexión personal quedan para completar por el equipo.
 
-## Divide y Conquista
+## 1 Introducción y modelo de datos
 
-1. Dividir: dos referencias, una lenta y otra rápida, localizan el punto medio;
-   se corta la lista en dos mitades.
-2. Resolver: se ordenan recursivamente ambas mitades. Las listas vacías o de un
-   elemento son los casos base.
-3. Combinar: se mezclan iterativamente según `Genero.getOrden()`. Ante claves
-   iguales, se toma primero el nodo izquierdo, conservando el orden relativo de
-   carga dentro de cada género.
+El proyecto implementa en Java un juego de deducción con Swing y consola opcional. Permite enfrentar al humano con dos máquinas de comportamiento diferente y observar una partida entre máquinas con su razonamiento. Selecciona 23 personajes de un catálogo de 36, conserva sus ID y utiliza el mismo mazo durante ambas fases.
 
-La mezcla consume cada nodo exactamente una vez. Ambas mitades se ordenan de
-forma recursiva, por lo que elegir el menor nodo de sus extremos conserva el
-orden. Elegir el nodo izquierdo en los empates conserva la estabilidad durante
-toda la recursión. No se reescriben los ID, los objetos personaje, sus atributos,
-las cantidades ni los índices de búsqueda.
+Las estrategias centrales son **Divide y Conquista**, mediante MergeSort para ordenar por género, y **Greedy**, para elegir preguntas según los candidatos restantes. MergeSort garantiza estabilidad y tiempo O(n log n). Greedy evalúa el turno en O(p·n), sin garantizar el menor número total de preguntas ni una victoria.
 
-La referencia a la cola permite enlazar cada personaje en tiempo constante.
-El ordenamiento restablece esa cola para permitir agregados posteriores. Agregar
-ya no garantiza un recorrido ordenado: quien utiliza el mazo debe invocar
-`ordenarPorGenero` explícitamente cuando lo necesite.
+El motor concentra reglas, turnos y validaciones; la presentación solicita acciones y muestra resultados. Un servicio independiente registra estadísticas por UUID. Esta separación permite probar el juego sin depender de la ventana.
 
-## Complejidad y decisiones
+El **catálogo** contiene todos los perfiles; el **mazo**, los 23 elegidos; cada **tablero**, los candidatos vivos de un participante. Descartar no elimina personajes del mazo.
 
-Sean n la cantidad de personajes del mazo, c la del catálogo y m el mayor ID positivo.
+| Estructura | Uso y justificación |
+|---|---|
+| Lista simplemente enlazada propia | `MazoPersonajes` y `Nodo`: agregado por cola y ordenamiento mediante reenlace de nodos. |
+| Arreglos indexados | Búsqueda por ID en O(1), detección de combinaciones duplicadas y marcas de candidatos vivos. |
+| `List` y `ArrayList` | Candidatos para sorteos, empates, diagnósticos e historial con orden de recorrido. |
+| `Set` y `EnumSet` | Preguntas humanas realizadas sin repetidos; consultas mediante copias inmutables. |
+| `Properties` | Registro de claves UUID y valores textuales. El acceso a personajes no usa un `Map`, sino un arreglo por ID. |
+
+Los paquetes `datos` y `defaults` contienen entidades y catálogo; `Funcionalidades`, reglas y estrategias; `Interfaces`, contratos; `Controladores`, coordinación de Swing; `GUI`, componentes; y `main`, el arranque. Pruebas y experimentos se mantienen separados.
+
+<!-- pagina -->
+
+## 2 UML de clases de la aplicación
+
+![UML de clases de presentación y persistencia](figures/uml-aplicacion.png)
+
+**Figura 1.** Clases principales de presentación y persistencia, con miembros seleccionados. `+` indica público, `-` privado y `~` visibilidad de paquete. Línea continua con punta abierta: asociación navegable. Discontinua con punta abierta: dependencia. Discontinua con triángulo vacío: implementación de interfaz. Continua con triángulo vacío: herencia de clase.
+
+`ControladorJuego` mantiene referencias a `IPartida`, `IVistaJuego` y `ServicioEstadisticas`. `VentanaPrincipal` implementa la vista y hereda de `JFrame`; conserva una referencia al controlador para entregar eventos. `EstadoVistaJuego` transporta la instantánea presentada. El servicio depende del contrato de repositorio, implementado por el archivo.
+
+`Main` construye y conecta los objetos. Los paneles de cartas, preguntas, secretos e historial se omiten para mantener la vista legible. La consola utiliza `PartidaConsola`, que reúne interacción y presentación sobre `IPartida`.
+
+El diagrama representa clases y relaciones, no un flujo de pantallas. Los archivos editables están en `docs/uml/`; el motor y sus estructuras se amplían en la figura siguiente.
+
+<!-- pagina -->
+
+## 3 UML de clases del motor
+
+![UML de clases del dominio](figures/uml-motor.png)
+
+**Figura 2.** El motor, los contratos de máquina y las políticas. Los miembros mostrados son una selección de las declaraciones reales.
+
+`Partida` implementa `IPartida` y conserva referencias `IMaquina`. Ambas máquinas implementan ese contrato y delegan su política en `EstrategiaMaquina`. Cada una copia el tablero recibido y comparte el mazo. El motor crea un árbitro por turno para responder consultas sin entregar el secreto.
+
+`TableroCandidatos` implementa `ITableroCandidatos`. Se omiten sobrecargas, getters repetidos y enumeraciones auxiliares. `ResultadoTurno` y `DiagnosticoTurno` conservan la acción y su fundamento; `ResultadoPartida`, el desenlace definitivo.
+
+La **herencia de candidatos** entre fases es una copia del estado de descarte, no herencia de clases Java: `Maquina2` no extiende `Maquina1`.
+
+<!-- pagina -->
+
+## Detalle UML del mazo
+
+![UML del mazo y sus nodos](figures/uml-mazo.png)
+
+**Figura 3.** El rombo negro representa composición: el mazo administra sus nodos. Cada nodo referencia exactamente un personaje y cero o un siguiente. La relación con personaje no es composición porque los objetos se comparten entre catálogo, mazo y consultas.
+
+`MazoPersonajes` implementa `IMazoPersonajes`, que extiende `Iterable<Personaje>`. `~` indica visibilidad de paquete: los nodos no son públicos. El mazo mantiene cabeza y cola y reordena enlaces, sin cambiar los personajes.
+
+El arreglo por ID y la lista son dos accesos a los mismos personajes. Cada tablero conserva una referencia al mazo y un arreglo independiente de marcas de candidatos. Por eso dos participantes pueden descartar de forma diferente sin cambiar el orden ni los atributos del mazo compartido.
+
+<!-- pagina -->
+
+## 4 Divide y Conquista en MergeSort
+
+`CatalogoPersonajes.crearMazo` mezcla referencias con Fisher–Yates, toma 23 sin repetición, las agrega al final y llama a `ordenarPorGenero`. Fisher–Yates cuesta O(c); la selección aleatoria no reemplaza el ordenamiento por género.
+
+MergeSort divide la lista por el punto medio, resuelve cada mitad recursivamente y las mezcla. La lista vacía o unitaria es el caso base. Este es el método real de `MazoPersonajes`:
+
+```java
+private static Nodo mergeSort(Nodo inicio) {
+    if (inicio == null || inicio.siguiente == null) {
+        return inicio;
+    }
+    // La referencia rápida avanza de a dos: cuando termina, la lenta marca el corte.
+    Nodo lento = inicio;
+    Nodo rapido = inicio.siguiente;
+    while (rapido != null && rapido.siguiente != null) {
+        lento = lento.siguiente;
+        rapido = rapido.siguiente.siguiente;
+    }
+    Nodo derecha = lento.siguiente;
+    lento.siguiente = null;
+    return mezclar(mergeSort(inicio), mergeSort(derecha));
+}
+```
+
+El corte y la mezcla cuestan O(n), de modo que T(n) = T(⌊n/2⌋) + T(⌈n/2⌉) + O(n) = O(n log n). La mezcla es iterativa y la recursión consume O(log n) de pila. Se reutilizan nodos sin crear arreglos auxiliares de personajes.
+
+El criterio es `Genero.getOrden()`. En la mezcla, `<=` elige el nodo izquierdo ante géneros iguales y conserva el orden relativo previo: esa es la estabilidad. No cambian ID, atributos, referencias ni búsquedas. Al terminar se restablece la cola en O(n).
+
+### Elección frente a QuickSort
+
+MergeSort se adapta al acceso secuencial y garantiza O(n log n). QuickSort puede alcanzar O(n²) con particiones desfavorables y su versión habitual no es estable. Con dos géneros sería posible una partición estable lineal, pero no es el algoritmo elegido para demostrar Divide y Conquista.
+
+La consigna original mencionaba orden incremental. El proyecto sustituyó esa inserción por agregado al final y ordenamiento explícito para evitar ordenar dos veces. Por tanto, `agregar` no mantiene el orden: se ordena al finalizar la carga, antes de jugar. Los iteradores anteriores a un cambio estructural no deben reutilizarse.
+
+<!-- pagina -->
+
+## 5 Greedy en la selección de preguntas
+
+Para cada pregunta q se cuentan **s** candidatos que cumplen el atributo y **t = v − s** que no lo cumplen, con v candidatos vivos. Se ignoran las preguntas constantes, s = 0 o t = 0. La evaluación es **D(q) = |s − t|**, calculada sobre el tablero actual sin consultar el secreto.
+
+| Política | Criterio local | Efecto |
+|---|---|---|
+| Máquina 1 agresiva | Maximizar D entre preguntas útiles | Una respuesta descarta mucho y la otra poco. |
+| Máquina 2 equilibrada | Minimizar D entre preguntas útiles | Minimiza el mayor grupo restante del próximo paso. |
+
+Se sortea entre preguntas empatadas. Es Greedy porque elige la mejor evaluación local sin explorar las secuencias posteriores. Fragmento real de `EstrategiaMaquina.seleccionarPregunta`:
+
+```java
+if (comparacion.esConstante()) { continue; }
+int diferencia = comparacion.getDiferencia();
+if (buscaEquilibrio ? diferencia < mejorDiferencia : diferencia > mejorDiferencia) {
+    mejores.clear();
+    mejorDiferencia = diferencia;
+}
+if (diferencia == mejorDiferencia) { mejores.add(pregunta); }
+```
+
+Con 8 candidatos, una partición 4/4 elimina siempre 4. Una 1/7 elimina 7 si el secreto está en el grupo de uno, pero solo 1 en el otro caso. Para candidatos equiprobables, la cantidad esperada restante es (s² + t²)/v: 4 frente a 6,25. Equilibrar minimiza también el promedio del siguiente paso bajo esa hipótesis; no se usa una distribución aprendida de elecciones humanas.
+
+### Riesgo y condición de intento
+
+Antes de preguntar, con más de un candidato, se sortea si arriesgar. La probabilidad es min(100, 4 + k·d) por ciento, con d descartes respecto del mazo original y k = 5 para Máquina 1 o 2,5 para Máquina 2. Diez descartes producen 54 % y 29 %. También cuentan los descartes heredados.
+
+El candidato se elige uniformemente entre los vivos. Con uno solo se intenta directamente; si no hay pregunta útil también se intenta. Un fallo elimina únicamente ese ID. Preguntar consume el turno aunque deje un único candidato. La probabilidad de arriesgar no equivale a la probabilidad de acertar: modela el comportamiento de cada rival.
+
+<!-- pagina -->
+
+## 6 Por qué Greedy puede no ser óptimo
+
+El árbol de decisión es una interpretación de las preguntas sí/no. El programa conserva candidatos, no un árbol completo. Los atributos están relacionados por los perfiles disponibles: un filtro cambia la utilidad de los restantes. No corresponde multiplicar probabilidades suponiendo atributos independientes.
+
+La Máquina 1 puede elegir 1/7 frente a 4/4 y terminar en la rama de siete. Su criterio no minimiza el peor caso inmediato. La Máquina 2 mejora ese criterio local, pero tampoco garantiza el menor número total de preguntas.
+
+### Contraejemplo con personajes reales del catálogo
+
+Considérese este subconjunto ilustrativo. No se presenta como una partida observada ni una frecuencia empírica.
+
+| ID y nombre | Género | Pelo | Lentes | Barba | Falta diente |
+|---|---|---|---|---|---|
+| 3 Catalina | F | Negro | Sí | No | No |
+| 5 Agustina | F | Negro | No | No | No |
+| 7 Clara | F | Rubio | Sí | No | Sí |
+| 15 Pilar | F | Pelado | Sí | Sí | Sí |
+| 16 Mía | F | Pelado | Sí | No | No |
+| 18 Alma | F | Pelado | No | No | No |
+| 20 Mateo | M | Negro | Sí | No | No |
+| 33 Joaquín | M | Pelado | Sí | No | No |
+
+La única partición 4/4 es «Es pelado». En cada grupo restante, las preguntas útiles separan 1/3; las profundidades mínimas son 1, 2, 3 y 3. Con la pregunta inicial, la suma es 8 + 9 + 9 = 26: **3,25 preguntas promedio**.
+
+«Tiene el pelo negro» divide 3/5. Género y lentes resuelven el grupo de tres con suma de profundidades 5. En el de cinco, «Le falta un diente» separa a Clara y Pilar; el color distingue esa pareja, y género y lentes resuelven el otro grupo de tres. La suma interna es 5 + 2 + 5 = 12. Total: 8 + 5 + 12 = 25, es decir, **3,125 preguntas promedio**.
+
+La alternativa menos equilibrada tiene menor costo. Se suponen candidatos equiprobables y preguntas hasta identificar, sin intentos anticipados ni rival. Un intento final suma uno a ambos promedios. El ejemplo refuta la optimalidad global del criterio de preguntas; no mide victorias. `docs/verification/greedy-counterexample.py` verifica particiones y costos mediante enumeración exacta.
+
+<!-- pagina -->
+
+## 7 Descartes y validaciones
+
+El tablero descarta únicamente candidatos vivos incompatibles con la respuesta. Fragmento real de `TableroCandidatos.descartarSegun`:
+
+```java
+for (Personaje p : mazo) {
+    if (vivo[p.getId()] && pregunta.cumple(p) != respuesta) {
+        vivo[p.getId()] = false;
+        cantidadViva--;
+        descartados++;
+    }
+}
+```
+
+El filtro cuesta O(n): recorre el mazo completo y consulta `vivo`, incluso si quedan pocos candidatos. Con respuestas consistentes, el secreto permanece vivo. Un intento fallido marca solo un ID en O(1).
+
+La máquina no recibe el personaje objetivo. `Partida` crea un objeto `IArbitroTurno` para responder una pregunta y comprobar un ID. El árbitro conserva internamente la referencia, pero el contrato no ofrece un getter del secreto. La vista humana solo puede revelar el rival al finalizar; espectador permite ver ambos secretos.
+
+El motor exige estado y turno correctos antes de modificar datos. Rechaza preguntas nulas o repetidas, ID ausentes y candidatos descartados sin consumir el turno. El mazo valida capacidad, ID positivo, ID único y combinación de atributos única. Las consultas de candidatos y preguntas son copias inmutables.
+
+La versión implementada prohíbe repetir preguntas humanas dentro de una fase, como decisión del proyecto respecto de la consigna inicial. Las máquinas recalculan preguntas útiles: una ya respondida pasa a ser constante en los sobrevivientes. La variedad de atributos permite distinguir los perfiles del catálogo.
+
+### Segunda fase y finalización
+
+Si el humano gana y el rival descartó menos de 15 personajes, puede enfrentar a la otra máquina. Con 15 o más se registra victoria directamente. Al aceptar se conservan UUID, mazo y secreto humano; la nueva máquina copia el tablero anterior y elige un secreto diferente del anterior. El humano reinicia con 22 candidatos; se reinician preguntas y ronda. Funciona con cualquiera de los dos órdenes de rivales.
+
+Acertar finaliza el enfrentamiento. Ganar ambas fases produce victoria verdadera; perder cualquiera, derrota final. Rechazar el desafío produce victoria. Mientras la decisión está pendiente no existe resultado definitivo. Una partida completa cuenta una sola vez y abandonar no produce un resultado registrable.
+
+<!-- pagina -->
+
+## 8 Patrones de diseño y contratos
+
+Divide y Conquista y Greedy son estrategias algorítmicas. Los siguientes patrones y decisiones organizan el software que las utiliza.
+
+### Modelo Vista Controlador
+
+`Partida`, tableros y estrategias resuelven reglas; `ControladorJuego` coordina eventos y guardado; `VentanaPrincipal` presenta instantáneas. El controlador delega la pregunta al motor:
+
+```java
+public void preguntar(Pregunta pregunta) {
+    if (turnoHumano()) { resolverAccion(() -> partida.preguntar(pregunta)); }
+}
+```
+
+La vista no calcula descartes ni probabilidades. `resolverAccion` registra el resultado o comunica el error y luego se actualiza la presentación. MVC permite reutilizar el motor desde consola, donde `PartidaConsola` reúne vista y controlador.
+
+### Estrategias polimórficas
+
+`Partida` invoca `IMaquina.ejecutarTurno`. Ambas máquinas implementan el contrato y delegan en el enum de políticas. Por ejemplo, Máquina 1:
+
+```java
+public ResultadoTurno ejecutarTurno(IArbitroTurno arbitro) {
+    return EstrategiaMaquina.AGRESIVA.ejecutarTurno(nombre, mazo, tablero, random, arbitro);
+}
+```
+
+La idea de Strategy aparece en comportamientos intercambiables por contrato. La implementación concreta comparte un enum parametrizado: no utiliza una jerarquía independiente de clases para cada fórmula ni configuración arbitraria de estrategias en ejecución.
+
+### Iterator y frontera de persistencia
+
+`IMazoPersonajes` extiende `Iterable<Personaje>`. El iterador de `MazoPersonajes` avanza desde `cabeza`; el `for (Personaje p : mazo)` usado para filtrar no expone nodos. No se implementa detección de modificación concurrente.
+
+`ServicioEstadisticas` recibe `IRepositorioEstadisticas` por constructor. Separa contabilización y disco y permite repositorios en memoria para pruebas. Es una frontera de persistencia y un ejemplo de inversión de dependencias, aunque el contrato expone `Properties`, por lo que no es independiente del formato a nivel de tipos. No se atribuyen Singleton, Observer propio o Factory Method por el solo hecho de usar interfaces o métodos de creación.
+
+<!-- pagina -->
+
+## 9 Notación Big O
+
+Sean n los personajes del mazo, c los del catálogo, m el mayor ID, p las preguntas, h las acciones del historial y r los registros persistidos. Hoy n = 23, c = 36 y p = 9. Las cotas expresan cómo crecerían las operaciones al variar esos tamaños.
 
 | Operación | Tiempo | Espacio adicional |
 |---|---|---|
-| Enlazar al final de la lista | O(1) | O(1) por nodo |
-| Ampliar el índice directo por ID | O(m) por ampliación | O(m) para el índice completo |
-| Buscar por ID | O(1) | O(1) |
-| Fisher–Yates | O(c) | O(c) para el arreglo de referencias del catálogo |
-| MergeSort | O(n log n) | O(log n) de pila recursiva |
-| Restablecer la cola después de ordenar | O(n) | O(1) |
+| Enlazar por cola | O(1) | O(1) por nodo |
+| Ampliar índice por ID | O(m) por ampliación | O(m) para el índice |
+| Buscar o descartar un ID | O(1) | O(1) |
+| Fisher–Yates | O(c) | O(c) en referencias |
+| MergeSort | O(n log n) | O(log n) de pila |
+| Restablecer cola | O(n) | O(1) |
+| Resolver un filtro | O(n) | O(1) |
+| Evaluar preguntas de máquina | O(p·n) | O(p) en diagnóstico y empates |
+| Elegir candidato aleatorio | O(n) | O(n) en referencias |
+| Copiar tablero | O(m) | O(m) |
+| Preparar segunda fase completa | O(n + m) | O(n + m) |
+| Consultar candidatos como copia | O(n) | O(n) |
+| Construir instantánea de vista | O(n + p + h) | O(n + p + h) |
+| Reconstruir vista e historial | O(n + h·p) | Componentes e imágenes |
+| Cargar, consultar o guardar registro | O(r), con registros de tamaño acotado | O(r) |
 
-El ordenamiento satisface T(n) = T(⌊n/2⌋) + T(⌈n/2⌉) + O(n).
-La mezcla es iterativa para evitar una pila de profundidad lineal en esa etapa.
-El algoritmo de ordenamiento no crea nodos ni arreglos de personajes adicionales.
+El enlace por cola es constante, pero `agregar` puede copiar el índice hasta ID + 1. Al construir el catálogo con ID consecutivos, las copias acumuladas llegan a O(c²). Por eso, toda la inicialización no cuesta solamente O(n log n): incluye construcción e índices. Con ID generalizados importa su magnitud m.
 
-El recorrido anterior de inserción ordenada podía acumular O(n²) de trabajo sobre
-la lista. Eliminarlo evita ordenar antes de MergeSort. Esto no convierte todas
-las operaciones de carga en operaciones de tiempo constante: el arreglo de ID
-existente crece hasta ID + 1 y puede copiarse repetidamente, con un costo total
-O(c²) para ID consecutivos del catálogo. Ese diseño del índice no cambia en este
-paso y debe incluirse en un análisis completo de la inicialización. Actualmente
-c = 36 y n = 23.
+No hay una única Big O para ordenamiento, interacción y persistencia. Para h acciones del motor, una cota simple es O(h·p·n), además de inicializar. Excluye tiempo humano, pausas deliberadas y dibujo de imágenes.
 
-MergeSort se adapta a listas enlazadas, es estable y garantiza O(n log n) incluso
-con muchas claves de género iguales. No hace falta incorporar también QuickSort.
+El motor devuelve un diagnóstico por turno; el controlador acumula O(h·p) de historial. Reconstruirlo después de cada acción puede acumular O(h·n + p·h²), aunque decidir siga costando O(p·n). No corresponde afirmar que todo el juego es O(log n) porque una pregunta ideal divida los candidatos por la mitad.
 
-## Comparación experimental de ordenamientos
+<!-- pagina -->
 
-Se completó el 2026-09-17 el requisito de la página 2 del PDF
-`Documentación para primer TP Programación III.pdf`: comparar el algoritmo
-elegido con uno cuadrático sobre la misma lista de 23 personajes.
-Se midió el MergeSort real del juego frente a Inserción estable sobre el mismo
-tipo de lista enlazada, con idénticos personajes y orden inicial para cada par.
+## 10 Comparación experimental y alternativas
 
-| Entrada de 23 personajes | MergeSort (ms) | Inserción (ms) |
+El 17/09/2026 se comparó el MergeSort real con Inserción estable sobre listas enlazadas del mismo tipo. Cada par recibió los mismos 23 personajes en idéntico orden y con nodos independientes. Son mediciones históricas conservadas, no ejecuciones nuevas de esta edición.
+
+| Entrada de 23 personajes | MergeSort en ms | Inserción en ms |
 |---|---:|---:|
 | Mezclada | 0.000630920 | 0.000453800 |
 | Ordenada por género | 0.000479040 | 0.000482370 |
 | Invertida por género | 0.000541280 | 0.000272445 |
 
-Los valores son medianas de 30 promedios por tanda de 10.000 ordenamientos,
-tras 15 tandas de calentamiento por escenario. Se usaron 100 semillas fijas,
-copias nuevas y alternancia del algoritmo medido primero. La preparación y las
-verificaciones quedan fuera del cronómetro; el restablecimiento de la cola está
-incluido en ambos algoritmos. El entorno fue Windows 11, Intel Core i9-14900HX,
-OpenJDK 25.0.4 y heap fijo de 256 MB.
+Los valores son medianas de 30 promedios por tanda de 10.000 ordenamientos, tras 15 tandas de calentamiento por escenario. Se usaron 100 semillas y alternancia del algoritmo medido primero. Se excluyeron preparación y verificaciones; se incluyó restablecer la cola. Se conservaron 180 mediciones.
 
-Inserción tuvo una mediana menor en el caso mezclado, por 0.000177120 ms:
-una diferencia sin relevancia práctica perceptible para un único ordenamiento
-al iniciar la partida. Con n = 23 los costos constantes importan y O(n log n)
-no garantiza menor tiempo que O(n²). Además, solo hay dos claves distintas de
-género. Se conserva MergeSort por su adecuación a la lista, estabilidad,
-complejidad y aplicación de Divide y Conquista.
+El entorno registrado fue Windows 11, Intel Core i9-14900HX, OpenJDK 25.0.4 y heap de 256 MB. Se verificaron 2.700.000 resultados de listas contando calentamiento y medición. El protocolo, rangos y reproducción están en `docs/experiments/README.md`; el CSV está en esa misma carpeta.
 
-Los tiempos varían entre tandas; no se afirma significación estadística ni
-superioridad universal a partir de un proceso de JVM. El
-[protocolo completo](experiments/README.md) documenta rangos, limitaciones,
-verificaciones y reproducción; el
-[CSV original](experiments/ordenamiento-2026-09-17.csv) conserva las 180 mediciones.
+En entrada mezclada, Inserción tuvo una mediana inferior por 0.000177120 ms, aproximadamente 0,177 microsegundos. Para ordenar una lista al iniciar, esa magnitud no tiene relevancia práctica perceptible. Con n = 23 importan las constantes y solo existen dos claves de género. Invertirlas no equivale a invertir 23 claves distintas ni garantiza el peor caso de Inserción.
 
-## Verificación
+No se afirma significación estadística ni superioridad universal: hubo variación y se utilizó una sola JVM. MergeSort conserva estabilidad, adecuación a la lista y crecimiento O(n log n). Big O no predice qué implementación gana para toda entrada pequeña.
 
-`OrdenamientoMazoRegressionTest` compara con el ordenamiento estable de referencia
-de Java: entradas vacías, de un elemento, de un solo género, ordenadas e invertidas;
-100 mezclas para cada tamaño de 0 a 36; conservación de identidad y búsquedas por
-ID; ordenamiento repetido; agregado posterior; y orden estable exacto de 100 mazos
-creados con semillas reproducibles. Los otros cinco programas de regresión cubren
-el comportamiento existente del juego.
+### Algoritmos no utilizados en el motor
 
-## Trabajo pendiente del informe
+QuickSort se descartó por su peor caso y estabilidad, explicados antes. Inserción quedó como referencia experimental: su peor caso O(n²) y el doble trabajo de insertar ordenado y luego ordenar no justifican usarla además de MergeSort. Burbujeo tampoco aporta una ventaja para este mazo.
 
-- Explicar las políticas voraces (Greedy) de selección de preguntas y los límites
-  de su optimización local.
-- Completar UML, etapas posteriores, capturas de evidencia, bibliografía,
-  algoritmos no utilizados, participación del equipo y reflexión final.
-- Conciliar README, documento de diseño y planilla al preparar la entrega.
+La búsqueda binaria no corresponde al filtrado de atributos ni al acceso por ID: se ordena por género, la lista no ofrece acceso posicional constante y el índice por ID ya es O(1). No se explora el árbol completo ni se usa programación dinámica en el juego. La enumeración exacta del contraejemplo es una verificación documental, no una nueva estrategia del motor.
 
-No atribuir autoría al equipo ni afirmar mediciones que no estén registradas.
+<!-- pagina -->
 
-## Paso 3: resultado y persistencia
+## 11 Persistencia e interfaz
 
-`Partida` conserva un resultado definitivo con UUID, modo y desenlace, resuelto
-al finalizar el último enfrentamiento o rechazar el desafío opcional. Ganar ambas fases suma una victoria verdadera
-incluida en las victorias; perder la segunda deja una derrota final. Una partida
-completa cuenta una sola vez aunque tenga dos fases.
+`ResultadoPartida` conserva UUID, modo y desenlace. El servicio registra una entrada por partida y deriva los contadores. Victoria verdadera suma tanto a victorias como a victorias verdaderas; perder la segunda fase deja derrota. El marcador de máquinas es independiente.
 
-`ServicioEstadisticas` aplica la contabilización y depende del contrato
-`IRepositorioEstadisticas`. La implementación de archivo usa Properties y UTF-8,
-con una entrada por UUID (modo, desenlace y usuario). Los contadores se derivan
-del registro, evitando mantener dos representaciones persistidas del mismo total.
-El separador se interpreta solo dos veces, por lo que también admite nombres que
-contienen `|`. Los marcadores humanos y de máquinas se consultan por separado.
+Los nombres se recortan y comparan con `equalsIgnoreCase`: Bruno y BRUNO comparten marcador, pero los acentos se distinguen. No hay autenticación. Un UUID idéntico con iguales datos no suma; un registro contradictorio se rechaza.
 
-La carga valida versión, identificadores, nombres y compatibilidad entre modo y
-resultado antes de permitir una escritura. Un duplicado idéntico no vuelve a
-contar; un duplicado contradictorio se rechaza. El guardado reemplaza el archivo
-atómicamente y propaga errores, conservando el resultado para reintentar.
-No se resuelve concurrencia entre procesos ni recuperación de partidas en curso.
-El registro crece con las partidas: carga, consulta y guardado cuestan O(r) en
-cantidad de registros (y espacio proporcional al tamaño del archivo).
+`RepositorioEstadisticasArchivo` utiliza `data/estadisticas.properties` en UTF-8 y guarda mediante temporal y reemplazo atómico. ServicioEstadisticas valida versión y contenido. Ante datos inválidos o error, informa la causa y permite reintentar. No coordina procesos concurrentes ni recupera partidas incompletas.
 
-La integración visual y la captura de usuario se incorporan en el paso 5.
-La consola no invoca automáticamente el servicio. Las pruebas de persistencia
-ejercitan directamente la API.
+`UsuarioArchivo` recuerda el nombre en `data/usuario.txt`, incluso al editar y cerrar sin jugar. Se guarda al cierre normal, no ante una terminación forzada. La consola produce el resultado, pero no guarda automáticamente las estadísticas.
 
-El paso 2 se había omitido durante esta etapa. La comparación de ordenamientos
-se completó posteriormente el 2026-09-17 y figura en su apartado específico;
-la justificación de Greedy sigue entre los pendientes del informe.
+### Coordinación de Swing
 
-## Paso 4: motor por acciones y presentación de consola
+`Main` abre Swing en el hilo de eventos y admite `--consola`. La ventana reúne menú, selección, partida, desafío y resultado. El humano ve su tablero, secreto, miniatura del rival e historial. Espectador dispone de dos tableros, pausa, velocidad y avance de un turno.
 
-La separación se basa en responsabilidades y dependencias, no en renombrar
-paquetes. `Partida`, tableros y estrategias forman el núcleo del juego.
-`PartidaConsola` controla la interacción y presenta los datos; `MenuConsola`
-elige el modo. Se conservan los paquetes y la biblioteca estándar.
+Un `Timer` de una ejecución introduce la pausa de máquina. Los tokens invalidan eventos cancelados aunque estén encolados. Las estadísticas se procesan fuera del hilo gráfico mediante un ejecutor, y las respuestas vuelven al hilo de vista. Las marcas de sesión, consulta y cierre evitan aplicar respuestas obsoletas.
 
-### Estado y transiciones
+La vista recibe copias inmutables y diagnósticos ya calculados. No repite una decisión para mostrarla: otro sorteo podría cambiar la explicación. El guardado permite reintentos; abandonar no cuenta. Los sprites locales se asocian por ID y las cartas conservan posición al descartar. La miniatura utiliza los candidatos heredados de la segunda fase.
 
-El motor conserva `EstadoPartida`, fase, ronda y participante de turno.
-Al iniciar un modo humano genera el mazo y espera una selección válida; en modo
-espectador sortea dos secretos distintos y comienza Máquina 1.
+Estas decisiones mejoran separación y capacidad de respuesta. No cambian el costo O(r) del archivo ni eliminan el costo de reconstruir el historial.
 
-Una pregunta humana registra su respuesta y filtra candidatos; un intento
-fallido descarta únicamente el ID intentado. Ambas acciones ceden el turno.
-Un turno fallido del rival devuelve el turno humano y avanza la ronda.
-En modo espectador la ronda avanza después de Máquina 2.
+<!-- pagina -->
 
-Al ganar la primera fase, el motor compara los descartes del rival con 15.
-Con menos de 15 queda pendiente la decisión y no existe aún un resultado final.
-Rechazar produce victoria; aceptar mantiene el UUID y el secreto humano, sortea
-un secreto distinto, copia el tablero heredado y reinicia el tablero humano con
-22 candidatos, las preguntas y la ronda. Ganar la segunda produce victoria
-verdadera; perder cualquiera de las fases produce derrota.
+## 12 Bitácora y verificación
 
-Las validaciones de estado, turno, repetición de pregunta e ID se hacen antes
-de modificar datos. Consultar candidatos no avanza el turno. Los datos inválidos
-y las operaciones fuera de orden se distinguen mediante excepciones de argumento
-y estado. Al terminar se rechazan nuevas acciones y se conserva el mismo resultado.
+El detalle está en `docs/development-log.md`. El resumen conserva las fechas registradas sin inferir aportes individuales.
 
-### Contratos y protección del estado
+| Fecha | Etapa y problema resuelto |
+|---|---|
+| 09/09/2026 | Cola y MergeSort estable; eliminación del doble ordenamiento y documentación en español. |
+| 10/09/2026 | Resultado y persistencia por UUID; prevención de duplicados y validación de archivo. |
+| 10/09/2026 | Motor por acciones separado de consola; validaciones previas y resultados estructurados. |
+| 12/09/2026 | Integración Swing, temporización y guardado; cancelación de eventos y respuestas tardías. |
+| 13/09/2026 | Miniatura rival, usuario recordado, marcador sin distinción de mayúsculas y verificación integral. |
+| 17/09/2026 | Comparación reproducible de MergeSort e Inserción. |
+| Edición del informe | UML de clases, ejemplos reales, conciliación documental y contraejemplo de Greedy. |
 
-`IPartida` expone acciones individuales y consultas. Las consultas de colecciones
-devuelven copias inmutables; no permiten descartar personajes ni modificar
-preguntas por fuera de las reglas. El secreto humano sigue consultable por su
-propia vista; durante una partida humana no se puede consultar el secreto rival.
-El paso 5 agrega una consulta permitida únicamente al finalizar ese modo.
-`IArbitroTurno` conserva la frontera entre estrategias y secreto rival.
+La verificación del 13/09 documenta compilación con `javac --release 17 -encoding UTF-8 -Xlint:all`, sin errores ni advertencias, y 14 regresiones aprobadas. Incluye 100 partidas entre máquinas, 1.440 búsquedas y 22.000 tableros de decisión. Son evidencias de aquella ejecución, no nuevas pruebas ejecutadas al redactar.
 
-`ResultadoTurno` distingue pregunta/respuesta de intento/acierto y conserva los
-descartes y candidatos posteriores. Para las máquinas incorpora un diagnóstico
-inmutable con la información usada al decidir. Las comparaciones se obtienen
-sobre los candidatos anteriores al filtrado, sin consultar el secreto.
-`PartidaConsola` convierte esos datos en texto después de la acción, sin volver
-a invocar la estrategia. El turno único, el riesgo y el desempate no cambian.
+Se cubrieron ordenamiento estable e identidad, secretos, entradas inválidas sin consumo de turno, ambos órdenes de segunda fase y límites de 0/14/15/22 descartes. También resultados, persistencia, reintentos, deduplicación, cancelación de eventos, respuestas obsoletas, usuario y flujos Swing.
 
-Se sustituyen el constructor que recibía `Scanner`, el bucle `jugar()` del motor
-y las consultas que exponían objetivos o tableros modificables. Las pruebas de
-partida usan la API pública y fuentes aleatorias reproducibles, sin reflexión
-sobre campos privados. El paso 5 utiliza estos contratos para la interfaz gráfica.
+Las capturas del anexo provienen de componentes reales de esa validación, con repositorios en memoria y archivos temporales. No representan una prueba manual prolongada. Se compiló para Java 17 y se ejecutó con JDK 25; no se registró ejecución en una JVM 17. El experimento del 17/09 tiene su propia verificación documentada.
 
-### Complejidad del motor
+En esta edición se contrastan fragmentos con el código, tiempos con el CSV y UML con declaraciones y campos. Se verifica el contraejemplo mediante un script independiente. No se modifican reglas, código de producción ni estadísticas locales.
 
-Sean n los personajes del mazo, p las preguntas posibles y m el mayor ID.
+<!-- pagina -->
 
-| Operación | Tiempo | Espacio adicional |
+## 13 Participación y reflexión
+
+| Integrante | Aportes y tareas | Dificultades y resolución |
 |---|---|---|
-| Validar turno o ID y resolver un intento humano | O(1) | O(1) |
-| Resolver pregunta humana | O(n) | O(1), aparte del conjunto de preguntas |
-| Evaluar las preguntas de una máquina | O(p·n) | O(p) para comparaciones y empates |
-| Elegir un intento aleatorio entre candidatos | O(n) | O(n) para referencias de candidatos |
-| Consultar personajes o candidatos como copia inmutable | O(n) | O(n) |
-| Consultar preguntas realizadas | O(p) | O(p) |
-| Preparar segunda fase y copiar el tablero heredado | O(n + m) | O(n + m) |
-| Conservar el resultado final | O(1) | O(1) |
+| Bruno Ramos | [Completar por el equipo] | [Completar por el equipo] |
+| Camila Barral | [Completar por el equipo] | [Completar por el equipo] |
+| Emmanuel Strah | [Completar por el equipo] | [Completar por el equipo] |
+| Juan Bogado | [Completar por el equipo] | [Completar por el equipo] |
 
-El diagnóstico agrega O(p) por turno; el motor no conserva una lista creciente
-de resultados. El costo de seleccionar, indexar y ordenar el mazo inicial
-permanece descrito en los apartados previos. Las estrategias conservan sus
-fórmulas y decisiones; no se realizaron mediciones de rendimiento.
+**Reflexión personal y grupal:** [Completar con aprendizajes, dificultades propias y valoración del trabajo compartido].
 
-### Verificación de la separación
+El balance técnico es un juego con ordenamiento estable, dos políticas explicables, secreto protegido y motor reutilizable. Las pruebas reproducen límites y los diagnósticos permiten observar decisiones. El experimento muestra por qué una mejor cota asintótica no implica menor tiempo con 23 elementos.
 
-Además de las regresiones de mazos, resultados y persistencia, se comprueban:
-ambos órdenes de segunda fase; límites 0/14/15/22 descartes; aceptación y rechazo;
-una acción por turno; conservación del secreto humano; tablero heredado
-independiente; preguntas reiniciadas; resultado pendiente y final estable;
-consultas inmutables; entradas inválidas; y ejecución completa de consola.
+Las dificultades registradas incluyen doble ordenamiento, mezcla de interacción y reglas, conservación de candidatos y eventos o guardados tardíos. Se resolvieron con ordenamiento explícito, motor por acciones, copias de tableros y controles de sesión. Estos hechos no sustituyen la reflexión de los integrantes.
 
-`MotorPartidaRegressionTest` reemplaza la entrada estándar por una que falla al
-leer y captura ambas salidas para detectar dependencias de consola durante las
-operaciones. Las pruebas de diagnóstico conservan la comparación sobre 22.000
-tableros y validan los datos anteriores al filtrado y su presentación sin repetir
-sorteos. Las 1.440 búsquedas ejercitan ambas estrategias con y sin herencia.
+Las mejoras posibles incluyen crecimiento más eficiente del índice, actualización incremental del historial y políticas con anticipación de más de un paso. Son propuestas, no funcionalidades implementadas; deben valorarse según la escala del juego.
 
-## Paso 5: implementación e integración de Swing
+### Bibliografía y fuentes
 
-### Responsabilidades y navegación
+1. López, Juan Ignacio. **Documentación para primer TP Programación III.pdf**, páginas 1 y 2. Consigna suministrada: UML, bitácora, algoritmos, complejidad y comparación experimental.
+2. **Consigna original TP.docx** y **Borrador de diseño.docx**. Modalidades, atributos, riesgo, herencia de candidatos y resultados. Las pistas opcionales del borrador no se presentan como implementadas.
+3. **Código fuente del repositorio**, especialmente `MazoPersonajes`, `CatalogoPersonajes`, `EstrategiaMaquina`, `TableroCandidatos`, `Partida`, `ControladorJuego` y `ServicioEstadisticas`. Fuente de los fragmentos y relaciones.
+4. **README.md**, **docs/development-log.md**, **docs/experiments/README.md** y CSV del 17/09/2026. Instrucciones, decisiones, pruebas y mediciones.
 
-`Main` abre Swing por defecto mediante el hilo de eventos (EDT); `--consola`
-conserva el adaptador anterior. `VentanaPrincipal` presenta una sola ventana con
-pantallas internas para menú, selección, partida, decisión de segunda fase y
-resultado. El menú captura el usuario y muestra sus estadísticas y el marcador
-global de partidas entre máquinas.
+### Herramientas y asistencia
 
-La separación MVC se sostiene por las dependencias: `Partida`, tableros y
-estrategias resuelven las reglas; `ControladorJuego` coordina acciones, navegación,
-temporización y persistencia; la GUI dibuja datos y entrega las acciones del
-usuario al controlador. `IVistaJuego` define las actualizaciones y consultas que
-el controlador dirige a la vista. Esta recibe `EstadoVistaJuego`, sin acceso al
-motor ni a sus tableros modificables. Las colecciones de cada instantánea son
-copias inmutables. `TurnoRegistrado` conserva fase y ronda anteriores a ejecutar
-la acción, incluso cuando esta cambia de fase o finaliza la partida.
+Se utilizaron Java, Swing, Git, PowerShell y herramientas de edición y verificación. La bitácora registra asistencia de IA mediante Codex para implementar, probar y documentar. Esta edición también usó Codex para contrastar fuentes, preparar UML, verificar el contraejemplo y redactar, y Python para generar documentos. Las mediciones se tomaron del experimento registrado. La revisión y defensa corresponde al equipo.
 
-El controlador consulta `getSecretoRivalFinal` solo al terminar una partida
-humana. El motor rechaza esa consulta en cualquier estado anterior y en modo
-espectador; en este último se mantiene la consulta de ambos secretos ya existente.
-La revelación no cambia reglas, candidatos, turnos ni el resultado definitivo.
+<!-- pagina -->
 
-### Hilo de eventos, pausas y guardado
+## Anexo A Fragmentos de código
 
-Los eventos de Swing y las acciones del motor se coordinan en el EDT. Un
-`javax.swing.Timer` de una ejecución introduce la pausa breve de la máquina en
-modo humano.
-En modo espectador se agregan pausa, velocidad y avance de un turno mientras está
-pausado. Cada programación lleva un token: cancelar invalida también un evento
-que ya estaba en la cola. Antes de confirmar una salida se cancela el reloj para
-evitar que la partida avance dentro del bucle de eventos del diálogo modal.
-Si se cancela la salida, se vuelve a programar cuando corresponde.
+Imágenes generadas a partir del código real, con archivo y líneas, como evidencia visual de las estrategias. Sus explicaciones y cotas están en los apartados 4 y 5.
 
-Las lecturas y escrituras de estadísticas usan un ejecutor de un solo hilo fuera
-del EDT. Esto serializa las operaciones de archivo de esta ventana y evita
-bloquear la interacción; no incorpora coordinación entre procesos. Las respuestas
-se entregan nuevamente al EDT. Un identificador de consulta descarta estadísticas
-que llegan después de cambiar de usuario; los identificadores de sesión y la
-marca de cierre impiden aplicar respuestas a una partida posterior o cerrada.
+![Código de MergeSort](figures/codigo-mergesort.png)
 
-Solo se registra `ResultadoPartida` al finalizar: abandonar o dejar pendiente la
-decisión de segunda fase no cuenta una partida. El guardado captura resultado,
-usuario y sesión, y conserva la deduplicación por UUID del servicio. Mientras se
-guarda se evita cerrar la ventana; ante un error se informa la causa y se permite
-reintentar o confirmar una salida sin guardar. Los errores de consulta se muestran
-como errores, sin presentar contadores cero como si la lectura hubiera sido válida.
+**Figura 4.** División recursiva y combinación. Tiempo O(n log n) y pila O(log n).
 
-### Presentación aprobada y recursos
+![Código de Greedy](figures/codigo-greedy.png)
 
-La referencia es una ventana de 1366 × 768 adaptable, con fondo celeste pastel
-`#e4f4ff`, acentos `#a6e1ff`, `#fff2b2` y `#b3747e`, superficies blancas y texto
-oscuro. Se utilizan cartas compactas con desplazamiento vertical; no se exige
-mostrar los 23 personajes simultáneamente. Los atributos aparecen al pasar el
-puntero o enfocar la carta con el teclado. Las cartas descartadas conservan su
-posición, con imagen atenuada y estado explícito. Seleccionar una carta prepara
-el intento; `Arriesgar` lo ejecuta sin una confirmación adicional.
+**Figura 5.** Evaluación de preguntas y empates. Tiempo O(p·n), espacio O(p) para diagnóstico y empates.
 
-Las preguntas se agrupan por Género, Pelo, Lentes, Barba y Diente. Elegir categoría
-o pregunta no consume turno: se ejecuta con `Preguntar`. Las preguntas realizadas
-se deshabilitan y vuelven a estar disponibles cuando el motor reinicia la fase.
-En modo humano se muestra el tablero propio y, a la derecha, el secreto propio,
-una miniatura de los candidatos del rival y el historial compacto con desplazamiento
-y razonamiento ampliable. `PanelMiniTablero` dibuja seis columnas de retratos sin
-acciones de selección; los descartados mantienen su lugar en gris y con una cruz.
-Nombre, ID, atributos y estado se consultan al pasar el cursor. La vista utiliza
-`EstadoVistaJuego.candidatosDe(estado.rival())`, por lo que presenta la herencia
-de candidatos al cambiar de rival en la segunda fase sin repetir lógica del motor.
-El espectador dispone de dos tableros lado a lado, ambos secretos y razonamiento
-visible en el historial compartido. Las transiciones son sencillas y no se
-incorpora sonido.
+<!-- pagina -->
 
-Los 36 sprites suministrados se cargan localmente desde `resources/personajes`,
-con nombres normalizados por ID (`01.png` a `36.png`) y alternativa de carga desde
-el classpath. La asociación no depende del nombre visible del personaje: el
-archivo original de Gael, rotulado con 23, corresponde al ID 22 del catálogo;
-Pablito Lescano conserva el ID 23. Los originales se preservan. La interfaz no
-requiere acceso a DiceBear ni otras llamadas de red al ejecutar el juego.
+## Anexo B Evidencia de la interfaz
 
-### Costo de la integración
+![Partida humana](figures/partida-humana.png)
 
-Con n personajes, p preguntas y h acciones registradas, construir una instantánea
-copia O(n + p + h) referencias y datos de conjuntos. El historial conserva los
-diagnósticos ya calculados, de hasta O(p) por acción de máquina, por lo que ocupa
-O(h·p). Reconstruir tableros e historial completo con esos diagnósticos cuesta
-O(n + h·p), aparte de la carga y el dibujo de imágenes. No se vuelve a ejecutar
-la estrategia para presentar su razonamiento. Los participantes y las categorías
-son una cantidad fija; el juego actual utiliza n = 23 y p = 9.
+**Figura 6.** Validación del 13/09/2026: tablero humano, secreto propio, miniatura rival e historial.
 
-El acceso a estadísticas mantiene el costo O(r) del registro persistido. Sacarlo
-del EDT mejora la capacidad de respuesta de la ventana, sin alterar ese costo
-algorítmico ni agregar mediciones experimentales.
+![Modo espectador](figures/espectador.png)
 
-### Verificación del paso 5
-
-La compilación con `javac --release 17 -encoding UTF-8 -Xlint:all` finalizó sin
-errores ni advertencias; las ejecuciones se realizaron con JDK 25. Pasaron los
-trece programas de regresión: nueve existentes y cuatro nuevos para revelación
-final, controlador, componentes Swing y flujos de la ventana.
-
-Las pruebas verifican eventos cancelados incluso dentro de una confirmación,
-pausa/paso/velocidad, ambos órdenes de segunda fase, historial anterior a cada
-transición, secreto final protegido, consultas inmutables, respuestas obsoletas,
-abandono sin cómputo y errores/reintentos de guardado sin duplicar resultados.
-La ventana real se creó y pintó desde el EDT sin mostrarla, con controles activados
-por eventos y repositorio en memoria. Se revisaron capturas de menú, selección,
-partida humana, desafío, resultado, espectador y error de guardado; también la
-distribución de la partida en el tamaño mínimo de 980 × 660.
-
-Los 36 recursos cargan desde la carpeta local y desde el classpath; se verificó
-que sus SHA-256 coinciden con los originales. La entrada `--consola` permite
-abrir y cerrar el menú, y la entrada sin entorno gráfico informa cómo usarla.
-Se validaron UTF-8 y `git diff --check`. No se realizaron mediciones de rendimiento.
-
-## Verificación integral (paso 6)
-
-Verificación del 13/09/2026 sobre el proyecto integrado, con los dos ajustes de
-usuario solicitados. La compilación con `javac --release 17 -encoding UTF-8
--Xlint:all` terminó sin errores ni advertencias, ejecutada con JDK 25.0.4.
-Pasaron los catorce programas de regresión del README, incluida la prueba de
-ventana real (sin omisión por entorno gráfico).
-
-Se verificaron catálogo, ID y MergeSort estable, entradas inválidas sin consumo
-de turno, protección de secretos, reglas y resultados de ambas fases, persistencia
-por UUID, reintentos, cancelación de eventos y respuestas tardías, y flujos de
-Swing para ambos rivales y espectador. Las regresiones incluyen 100 partidas
-entre máquinas, 1.440 búsquedas y decisiones sobre 22.000 tableros.
-
-El marcador compara nombres con `equalsIgnoreCase`, tanto al consultar como al
-comprobar duplicados. Reúne las variantes de mayúsculas de registros antiguos
-sin migrar ni reescribir el historial, conserva los acentos y mantiene separados
-los contadores de máquinas. El costo sigue siendo lineal en el tamaño del registro.
-
-`UsuarioArchivo` guarda el último nombre en UTF-8 mediante un temporal y reemplazo
-atómico en `data/usuario.txt`. `Main` conecta esa preferencia con la ventana; el
-motor no participa. Se conserva la escritura del nombre elegida por el usuario.
-Las pruebas verificaron recarga, cambio, campo vacío, errores de archivo y que el
-evento de cierre entrega el texto recién editado, aunque no se haya iniciado una
-partida ni consultado el marcador. Los errores se informan; una lectura fallida
-impide sobrescribir el archivo. El guardado ocurre al cierre normal, no ante la
-terminación forzada del proceso. La lectura y escritura de esta preferencia breve
-se realizan al abrir/cerrar; las estadísticas mantienen su ejecución en segundo plano.
-
-Se generaron nueve capturas de componentes reales en `data/validacion-paso6` y
-se inspeccionaron visualmente menú, partida humana y tamaño mínimo. Se comprobó
-la salida de consola, el mensaje sin entorno gráfico, los argumentos inválidos,
-la correspondencia entre paquetes y rutas, UTF-8 y `git diff --check`.
-La ejecución fue sobre JDK 25 con compatibilidad de compilación Java 17; no se
-ejecutó una JVM 17 ni se realizó una prueba manual prolongada. Las pruebas usaron
-archivos temporales o repositorios en memoria, sin modificar estadísticas locales.
-
-No se detectaron fallos en las comprobaciones realizadas. El cierre de informe,
-UML y entrega corresponde al paso 7; el paso 2 continúa omitido por decisión del usuario.
+**Figura 7.** Misma validación: dos tableros y razonamiento de máquinas. Son evidencias históricas, no capturas de una partida nueva de esta edición.
