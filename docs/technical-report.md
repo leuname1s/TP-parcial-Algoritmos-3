@@ -160,7 +160,7 @@ La única partición 4/4 es «Es pelado». En cada grupo restante, las preguntas
 
 «Tiene el pelo negro» divide 3/5. Género y lentes resuelven el grupo de tres con suma de profundidades 5. En el de cinco, «Le falta un diente» separa a Clara y Pilar; el color distingue esa pareja, y género y lentes resuelven el otro grupo de tres. La suma interna es 5 + 2 + 5 = 12. Total: 8 + 5 + 12 = 25, es decir, **3,125 preguntas promedio**.
 
-La alternativa menos equilibrada tiene menor costo. Se suponen candidatos equiprobables y preguntas hasta identificar, sin intentos anticipados ni rival. Un intento final suma uno a ambos promedios. El ejemplo refuta la optimalidad global del criterio de preguntas; no mide victorias. `docs/verification/greedy-counterexample.py` verifica particiones y costos mediante enumeración exacta.
+La alternativa menos equilibrada tiene menor costo. Se suponen candidatos equiprobables y preguntas hasta identificar, sin intentos anticipados ni rival. Un intento final suma uno a ambos promedios. El ejemplo refuta la optimalidad global del criterio de preguntas; no mide victorias.
 
 <!-- pagina -->
 
@@ -282,7 +282,7 @@ No se afirma significación estadística ni superioridad universal: hubo variaci
 
 QuickSort se descartó por su peor caso y estabilidad, explicados antes. Inserción quedó como referencia experimental: su peor caso O(n²) y el doble trabajo de insertar ordenado y luego ordenar no justifican usarla además de MergeSort. Burbujeo tampoco aporta una ventaja para este mazo.
 
-La búsqueda binaria no corresponde al filtrado de atributos ni al acceso por ID: se ordena por género, la lista no ofrece acceso posicional constante y el índice por ID ya es O(1). No se explora el árbol completo ni se usa programación dinámica en el juego. La enumeración exacta del contraejemplo es una verificación documental, no una nueva estrategia del motor.
+La búsqueda binaria no corresponde al filtrado de atributos ni al acceso por ID: se ordena por género, la lista no ofrece acceso posicional constante y el índice por ID ya es O(1). No se explora el árbol completo ni se usa programación dinámica en el juego.
 
 <!-- pagina -->
 
@@ -328,7 +328,7 @@ Se cubrieron ordenamiento estable e identidad, secretos, entradas inválidas sin
 
 Las capturas del anexo provienen de componentes reales de esa validación, con repositorios en memoria y archivos temporales. No representan una prueba manual prolongada. Se compiló para Java 17 y se ejecutó con JDK 25; no se registró ejecución en una JVM 17. El experimento del 17/09 tiene su propia verificación documentada.
 
-En esta edición se contrastan fragmentos con el código, tiempos con el CSV y UML con declaraciones y campos. Se verifica el contraejemplo mediante un script independiente. No se modifican reglas, código de producción ni estadísticas locales.
+En esta edición se contrastan fragmentos con el código, tiempos con el CSV y UML con declaraciones y campos. No se modifican reglas, código de producción ni estadísticas locales.
 
 <!-- pagina -->
 
