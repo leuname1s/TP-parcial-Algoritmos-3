@@ -72,25 +72,7 @@ El arreglo por ID y la lista son dos accesos a los mismos personajes. Cada table
 
 `CatalogoPersonajes.crearMazo` mezcla referencias con Fisher–Yates, toma 23 sin repetición, las agrega al final y llama a `ordenarPorGenero`. Fisher–Yates cuesta O(c); la selección aleatoria no reemplaza el ordenamiento por género.
 
-MergeSort divide la lista por el punto medio, resuelve cada mitad recursivamente y las mezcla. La lista vacía o unitaria es el caso base. Este es el método real de `MazoPersonajes`:
-
-```java
-private static Nodo mergeSort(Nodo inicio) {
-    if (inicio == null || inicio.siguiente == null) {
-        return inicio;
-    }
-    // La referencia rápida avanza de a dos: cuando termina, la lenta marca el corte.
-    Nodo lento = inicio;
-    Nodo rapido = inicio.siguiente;
-    while (rapido != null && rapido.siguiente != null) {
-        lento = lento.siguiente;
-        rapido = rapido.siguiente.siguiente;
-    }
-    Nodo derecha = lento.siguiente;
-    lento.siguiente = null;
-    return mezclar(mergeSort(inicio), mergeSort(derecha));
-}
-```
+MergeSort divide la lista por el punto medio, resuelve cada mitad recursivamente y las mezcla. La lista vacía o unitaria es el caso base. La figura 4 del Anexo A muestra el método `MazoPersonajes.mergeSort`.
 
 El corte y la mezcla cuestan O(n), de modo que T(n) = T(⌊n/2⌋) + T(⌈n/2⌉) + O(n) = O(n log n). La mezcla es iterativa y la recursión consume O(log n) de pila. Se reutilizan nodos sin crear arreglos auxiliares de personajes.
 
@@ -104,7 +86,7 @@ La consigna original mencionaba orden incremental. El proyecto sustituyó esa in
 
 <!-- pagina -->
 
-## 5 Greedy en la selección de preguntas
+## 5 Greedy en las máquinas
 
 Para cada pregunta q se cuentan **s** candidatos que cumplen el atributo y **t = v − s** que no lo cumplen, con v candidatos vivos. Se ignoran las preguntas constantes, s = 0 o t = 0. La evaluación es **D(q) = |s − t|**, calculada sobre el tablero actual sin consultar el secreto.
 
@@ -113,37 +95,23 @@ Para cada pregunta q se cuentan **s** candidatos que cumplen el atributo y **t =
 | Máquina 1 agresiva | Maximizar D entre preguntas útiles | Una respuesta descarta mucho y la otra poco. |
 | Máquina 2 equilibrada | Minimizar D entre preguntas útiles | Minimiza el mayor grupo restante del próximo paso. |
 
-Se sortea entre preguntas empatadas. Es Greedy porque elige la mejor evaluación local sin explorar las secuencias posteriores. Fragmento real de `EstrategiaMaquina.seleccionarPregunta`:
+Se sortea entre preguntas empatadas. Es Greedy porque elige la mejor evaluación local sin explorar las secuencias posteriores. La figura 5 del Anexo A muestra la selección y el desempate en `EstrategiaMaquina.seleccionarPregunta`.
 
-```java
-if (comparacion.esConstante()) { continue; }
-int diferencia = comparacion.getDiferencia();
-if (buscaEquilibrio ? diferencia < mejorDiferencia : diferencia > mejorDiferencia) {
-    mejores.clear();
-    mejorDiferencia = diferencia;
-}
-if (diferencia == mejorDiferencia) { mejores.add(pregunta); }
-```
-
-Con 8 candidatos, una partición 4/4 elimina siempre 4. Una 1/7 elimina 7 si el secreto está en el grupo de uno, pero solo 1 en el otro caso. Para candidatos equiprobables, la cantidad esperada restante es (s² + t²)/v: 4 frente a 6,25. Equilibrar minimiza también el promedio del siguiente paso bajo esa hipótesis; no se usa una distribución aprendida de elecciones humanas.
+Con candidatos equiprobables, la cantidad esperada de candidatos restantes es (s² + t²)/v: 4 con una partición 4/4 y 6,25 con una 1/7. La política equilibrada minimiza ese valor inmediato.
 
 ### Riesgo y condición de intento
 
-Antes de preguntar, con más de un candidato, se sortea si arriesgar. La probabilidad es min(100, 4 + k·d) por ciento, con d descartes respecto del mazo original y k = 5 para Máquina 1 o 2,5 para Máquina 2. Diez descartes producen 54 % y 29 %. También cuentan los descartes heredados.
+Antes de preguntar, con más de un candidato, se sortea si arriesgar. La probabilidad es min(100, 4 + k·d) por ciento, con d descartes respecto del mazo original y k = 5 para Máquina 1 o 2,5 para Máquina 2. También cuentan los descartes heredados.
 
-El candidato se elige uniformemente entre los vivos. Con uno solo se intenta directamente; si no hay pregunta útil también se intenta. Un fallo elimina únicamente ese ID. Preguntar consume el turno aunque deje un único candidato. La probabilidad de arriesgar no equivale a la probabilidad de acertar: modela el comportamiento de cada rival.
+El candidato se elige uniformemente entre los vivos. Con uno solo se intenta directamente; si no hay pregunta útil también se intenta. Preguntar consume el turno aunque deje un único candidato. La probabilidad de arriesgar no equivale a la probabilidad de acertar: modela el comportamiento de cada rival.
 
-<!-- pagina -->
+## Límite global y contraejemplo
 
-## 6 Por qué Greedy puede no ser óptimo
-
-El árbol de decisión es una interpretación de las preguntas sí/no. El programa conserva candidatos, no un árbol completo. Los atributos están relacionados por los perfiles disponibles: un filtro cambia la utilidad de los restantes. No corresponde multiplicar probabilidades suponiendo atributos independientes.
-
-La Máquina 1 puede elegir 1/7 frente a 4/4 y terminar en la rama de siete. Su criterio no minimiza el peor caso inmediato. La Máquina 2 mejora ese criterio local, pero tampoco garantiza el menor número total de preguntas.
+El programa conserva los candidatos vivos y recalcula las preguntas posibles en cada turno; no construye un árbol completo. Como cada respuesta cambia qué atributos separan a los perfiles restantes, una buena partición local no garantiza el menor promedio total de preguntas.
 
 ### Contraejemplo con personajes reales del catálogo
 
-Considérese este subconjunto ilustrativo. No se presenta como una partida observada ni una frecuencia empírica.
+Consideremos estos ocho perfiles como candidatos equiprobables y preguntemos hasta identificarlos, sin intentos anticipados ni rival. Es un ejemplo ilustrativo, no una partida observada ni una frecuencia empírica.
 
 | ID y nombre | Género | Pelo | Lentes | Barba | Falta diente |
 |---|---|---|---|---|---|
@@ -158,13 +126,13 @@ Considérese este subconjunto ilustrativo. No se presenta como una partida obser
 
 La única partición 4/4 es «Es pelado». En cada grupo restante, las preguntas útiles separan 1/3; las profundidades mínimas son 1, 2, 3 y 3. Con la pregunta inicial, la suma es 8 + 9 + 9 = 26: **3,25 preguntas promedio**.
 
-«Tiene el pelo negro» divide 3/5. Género y lentes resuelven el grupo de tres con suma de profundidades 5. En el de cinco, «Le falta un diente» separa a Clara y Pilar; el color distingue esa pareja, y género y lentes resuelven el otro grupo de tres. La suma interna es 5 + 2 + 5 = 12. Total: 8 + 5 + 12 = 25, es decir, **3,125 preguntas promedio**.
+«Tiene el pelo negro» divide 3/5. Género y lentes resuelven el grupo de tres con suma de profundidades 5. En el de cinco, «Le falta un diente» separa a Clara y Pilar; «Es pelado» las distingue, y género y lentes resuelven el otro grupo de tres. La suma interna es 5 + 2 + 5 = 12. Total: 8 + 5 + 12 = 25, es decir, **3,125 preguntas promedio**.
 
-La alternativa menos equilibrada tiene menor costo. Se suponen candidatos equiprobables y preguntas hasta identificar, sin intentos anticipados ni rival. Un intento final suma uno a ambos promedios. El ejemplo refuta la optimalidad global del criterio de preguntas; no mide victorias.
+El árbol que empieza por pelo negro requiere menos preguntas en promedio (3,125 frente a 3,25), aunque ambos pueden necesitar hasta cuatro. Sumar un intento final a ambos mantiene la diferencia; el ejemplo no compara victorias.
 
 <!-- pagina -->
 
-## 7 Descartes y validaciones
+## 6 Descartes y validaciones
 
 El tablero descarta únicamente candidatos vivos incompatibles con la respuesta. Fragmento real de `TableroCandidatos.descartarSegun`:
 
@@ -194,7 +162,7 @@ Acertar finaliza el enfrentamiento. Ganar ambas fases produce victoria verdadera
 
 <!-- pagina -->
 
-## 8 Patrones de diseño y contratos
+## 7 Patrones de diseño y contratos
 
 Divide y Conquista y Greedy son estrategias algorítmicas. Los siguientes patrones y decisiones organizan el software que las utiliza.
 
@@ -230,7 +198,7 @@ La idea de Strategy aparece en comportamientos intercambiables por contrato. La 
 
 <!-- pagina -->
 
-## 9 Notación Big O
+## 8 Notación Big O
 
 Sean n los personajes del mazo, c los del catálogo, m el mayor ID, p las preguntas, h las acciones del historial y r los registros persistidos. Hoy n = 23, c = 36 y p = 9. Las cotas expresan cómo crecerían las operaciones al variar esos tamaños.
 
@@ -260,7 +228,7 @@ El motor devuelve un diagnóstico por turno; el controlador acumula O(h·p) de h
 
 <!-- pagina -->
 
-## 10 Comparación experimental y alternativas
+## 9 Comparación experimental y alternativas
 
 El 17/09/2026 se comparó el MergeSort real con Inserción estable sobre listas enlazadas del mismo tipo. Cada par recibió los mismos 23 personajes en idéntico orden y con nodos independientes. Son mediciones históricas conservadas, no ejecuciones nuevas de esta edición.
 
@@ -286,29 +254,29 @@ La búsqueda binaria no corresponde al filtrado de atributos ni al acceso por ID
 
 <!-- pagina -->
 
-## 11 Persistencia e interfaz
+## 10 Persistencia e interfaz
 
-`ResultadoPartida` conserva UUID, modo y desenlace. El servicio registra una entrada por partida y deriva los contadores. Victoria verdadera suma tanto a victorias como a victorias verdaderas; perder la segunda fase deja derrota. El marcador de máquinas es independiente.
+`ResultadoPartida` conserva UUID, modo y desenlace. El servicio registra una entrada por partida y deriva los contadores; el marcador de máquinas es independiente.
 
-Los nombres se recortan y comparan con `equalsIgnoreCase`: Bruno y BRUNO comparten marcador, pero los acentos se distinguen. No hay autenticación. Un UUID idéntico con iguales datos no suma; un registro contradictorio se rechaza.
+Los nombres se recortan y se comparan sin distinguir mayúsculas o minúsculas, pero los acentos sí se distinguen. No hay autenticación. Un UUID idéntico con iguales datos no suma; un registro contradictorio se rechaza.
 
 `RepositorioEstadisticasArchivo` utiliza `data/estadisticas.properties` en UTF-8 y guarda mediante temporal y reemplazo atómico. ServicioEstadisticas valida versión y contenido. Ante datos inválidos o error, informa la causa y permite reintentar. No coordina procesos concurrentes ni recupera partidas incompletas.
 
 `UsuarioArchivo` recuerda el nombre en `data/usuario.txt`, incluso al editar y cerrar sin jugar. Se guarda al cierre normal, no ante una terminación forzada. La consola produce el resultado, pero no guarda automáticamente las estadísticas.
 
-### Coordinación de Swing
+### Interfaz Swing
 
-`Main` abre Swing en el hilo de eventos y admite `--consola`. La ventana reúne menú, selección, partida, desafío y resultado. El humano ve su tablero, secreto, miniatura del rival e historial. Espectador dispone de dos tableros, pausa, velocidad y avance de un turno.
+`Main` abre Swing en el hilo de eventos y admite `--consola`. La interfaz ofrece partidas humanas y modo espectador, que muestra ambas máquinas y permite pausar o avanzar turnos.
 
-Un `Timer` de una ejecución introduce la pausa de máquina. Los tokens invalidan eventos cancelados aunque estén encolados. Las estadísticas se procesan fuera del hilo gráfico mediante un ejecutor, y las respuestas vuelven al hilo de vista. Las marcas de sesión, consulta y cierre evitan aplicar respuestas obsoletas.
+Un `Timer` regula la pausa entre turnos de máquina y el guardado se procesa fuera del hilo gráfico. Las respuestas obsoletas se descartan al cancelar una consulta o cambiar la sesión, para no actualizar una partida que ya cambió.
 
-La vista recibe copias inmutables y diagnósticos ya calculados. No repite una decisión para mostrarla: otro sorteo podría cambiar la explicación. El guardado permite reintentos; abandonar no cuenta. Los sprites locales se asocian por ID y las cartas conservan posición al descartar. La miniatura utiliza los candidatos heredados de la segunda fase.
+La vista recibe copias inmutables y diagnósticos ya calculados, para mostrar el fundamento sin volver a sortear la pregunta.
 
-Estas decisiones mejoran separación y capacidad de respuesta. No cambian el costo O(r) del archivo ni eliminan el costo de reconstruir el historial.
+
 
 <!-- pagina -->
 
-## 12 Bitácora y verificación
+## 11 Bitácora y verificación
 
 El detalle está en `docs/development-log.md`. El resumen conserva las fechas registradas sin inferir aportes individuales.
 
@@ -332,7 +300,7 @@ En esta edición se contrastan fragmentos con el código, tiempos con el CSV y U
 
 <!-- pagina -->
 
-## 13 Participación y reflexión
+## 12 Participación y reflexión
 
 | Integrante | Aportes y tareas | Dificultades y resolución |
 |---|---|---|
@@ -368,7 +336,7 @@ Imágenes generadas a partir del código real, con archivo y líneas, como evide
 
 ![Código de MergeSort](figures/codigo-mergesort.png)
 
-**Figura 4.** División recursiva y combinación. Tiempo O(n log n) y pila O(log n).
+**Figura 4.** División recursiva de la lista y llamada al método de mezcla. Tiempo O(n log n) y pila O(log n).
 
 ![Código de Greedy](figures/codigo-greedy.png)
 
