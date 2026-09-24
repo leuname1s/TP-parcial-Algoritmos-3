@@ -12,7 +12,7 @@ El proyecto implementa en Java un juego de deducción con Swing y consola opcion
 
 Las estrategias centrales son **Divide y Conquista**, mediante MergeSort para ordenar por género, y **Greedy**, para elegir preguntas según los candidatos restantes. MergeSort garantiza estabilidad y tiempo O(n log n). Greedy evalúa el turno en O(p·n), sin garantizar el menor número total de preguntas ni una victoria.
 
-El motor concentra reglas, turnos y validaciones; la presentación solicita acciones y muestra resultados. Un servicio independiente registra estadísticas por UUID. Esta separación permite probar el juego sin depender de la ventana.
+El motor concentra reglas, turnos y validaciones; la presentación solicita acciones y muestra resultados. Un servicio independiente registra estadísticas por UUID. Esta separación permite utilizar el juego sin depender de la ventana.
 
 El **catálogo** contiene todos los perfiles; el **mazo**, los 23 elegidos; cada **tablero**, los candidatos vivos de un participante. Descartar no elimina personajes del mazo.
 
@@ -24,7 +24,7 @@ El **catálogo** contiene todos los perfiles; el **mazo**, los 23 elegidos; cada
 | `Set` y `EnumSet` | Preguntas humanas realizadas sin repetidos; consultas mediante copias inmutables. |
 | `Properties` | Registro de claves UUID y valores textuales. El acceso a personajes no usa un `Map`, sino un arreglo por ID. |
 
-Los paquetes `datos` y `defaults` contienen entidades y catálogo; `Funcionalidades`, reglas y estrategias; `Interfaces`, contratos; `Controladores`, coordinación de Swing; `GUI`, componentes; y `main`, el arranque. Pruebas y experimentos se mantienen separados.
+Los paquetes `datos` y `defaults` contienen entidades y catálogo; `Funcionalidades`, reglas y estrategias; `Interfaces`, contratos; `Controladores`, coordinación de Swing; `GUI`, componentes; y `main`, el arranque. El experimento de ordenamiento se mantiene separado del juego.
 
 <!-- pagina -->
 
@@ -184,7 +184,7 @@ La idea de Strategy aparece en comportamientos intercambiables por contrato. La 
 
 `IMazoPersonajes` extiende `Iterable<Personaje>`. El iterador de `MazoPersonajes` avanza desde `cabeza`; el `for (Personaje p : mazo)` usado para filtrar no expone nodos. No se implementa detección de modificación concurrente.
 
-`ServicioEstadisticas` recibe `IRepositorioEstadisticas` por constructor. Separa contabilización y disco y permite repositorios en memoria para pruebas. Es una frontera de persistencia y un ejemplo de inversión de dependencias, aunque el contrato expone `Properties`, por lo que no es independiente del formato a nivel de tipos. No se atribuyen Singleton, Observer propio o Factory Method por el solo hecho de usar interfaces o métodos de creación.
+`ServicioEstadisticas` recibe `IRepositorioEstadisticas` por constructor. Separa contabilización y disco y permite sustituir el repositorio de archivos. Es una frontera de persistencia y un ejemplo de inversión de dependencias, aunque el contrato expone `Properties`, por lo que no es independiente del formato a nivel de tipos. No se atribuyen Singleton, Observer propio o Factory Method por el solo hecho de usar interfaces o métodos de creación.
 
 <!-- pagina -->
 
@@ -269,11 +269,9 @@ La vista recibe copias inmutables y diagnósticos ya calculados, para mostrar el
 
 ## 11 Verificación
 
-La verificación registrada el 13/09/2026 completó la compilación compatible con Java 17, en UTF-8 y sin errores ni advertencias, y aprobó los 14 programas de regresión. La ejecución se realizó con JDK 25; no se comprobó en una JVM 17.
+La compilación compatible con Java 17 se realizó en UTF-8 y sin errores ni advertencias con JDK 25; no se comprobó en una JVM 17. El experimento del 17/09/2026 tiene su protocolo y comprobaciones en `docs/experiments/README.md`.
 
-Las pruebas cubrieron ordenamiento e identidad de personajes, estrategias y protección de secretos, validación de entradas, transiciones entre fases, resultados y persistencia. También comprobaron reintentos, prevención de duplicados, cancelación de turnos, respuestas tardías y flujos de Swing.
-
-Las capturas históricas de la interfaz se conservan en `docs/figures/` y proceden de pruebas de componentes reales con datos controlados; no acreditan una prueba manual prolongada. El experimento del 17/09/2026 tiene su protocolo y verificación en `docs/experiments/README.md`. Estos resultados corresponden a las ejecuciones registradas, no a nuevas pruebas realizadas durante la edición del informe.
+Las capturas históricas de la interfaz se conservan en `docs/figures/` y muestran componentes reales con datos controlados. Los resultados experimentales corresponden a la ejecución registrada, no a una medición nueva durante la edición del informe.
 
 <!-- pagina -->
 
@@ -288,7 +286,7 @@ Las capturas históricas de la interfaz se conservan en `docs/figures/` y proced
 
 **Reflexión personal y grupal:** [Completar con aprendizajes, dificultades propias y valoración del trabajo compartido].
 
-El balance técnico es un juego con ordenamiento estable, dos políticas explicables, secreto protegido y motor reutilizable. Las pruebas reproducen límites y los diagnósticos permiten observar decisiones. El experimento muestra por qué una mejor cota asintótica no implica menor tiempo con 23 elementos.
+El balance técnico es un juego con ordenamiento estable, dos políticas explicables, secreto protegido y motor reutilizable. Los diagnósticos permiten observar decisiones. El experimento muestra por qué una mejor cota asintótica no implica menor tiempo con 23 elementos.
 
 Las dificultades registradas incluyen doble ordenamiento, mezcla de interacción y reglas, conservación de candidatos y eventos o guardados tardíos. Se resolvieron con ordenamiento explícito, motor por acciones, copias de tableros y controles de sesión. Estos hechos no sustituyen la reflexión de los integrantes.
 
@@ -299,11 +297,11 @@ Las mejoras posibles incluyen crecimiento más eficiente del índice, actualizac
 1. López, Juan Ignacio. **Documentación para primer TP Programación III.pdf**, páginas 1 y 2. Consigna suministrada: UML, algoritmos, complejidad y comparación experimental.
 2. **Consigna original TP.docx** y **Borrador de diseño.docx**. Modalidades, atributos, riesgo, herencia de candidatos y resultados. Las pistas opcionales del borrador no se presentan como implementadas.
 3. **Código fuente del repositorio**, especialmente `MazoPersonajes`, `CatalogoPersonajes`, `EstrategiaMaquina`, `TableroCandidatos`, `Partida`, `ControladorJuego` y `ServicioEstadisticas`. Fuente de los fragmentos y relaciones.
-4. **README.md**, **docs/experiments/README.md** y CSV del 17/09/2026. Instrucciones, decisiones, pruebas y mediciones.
+4. **README.md**, **docs/experiments/README.md** y CSV del 17/09/2026. Instrucciones, decisiones y mediciones.
 
 ### Herramientas y asistencia
 
-Se utilizaron Java, Swing, Git, PowerShell y herramientas de edición y verificación. Se utilizó asistencia de IA mediante Codex para implementar, probar y documentar el proyecto. Esta edición también usó Codex para contrastar fuentes, preparar UML, verificar el contraejemplo y redactar, y Python para generar documentos. Las mediciones se tomaron del experimento registrado. La revisión y defensa corresponde al equipo.
+Se utilizaron Java, Swing, Git, PowerShell y herramientas de edición y verificación. Se utilizó asistencia de IA mediante Codex para implementar y documentar el proyecto. Esta edición también usó Codex para contrastar fuentes, preparar UML, verificar el contraejemplo y redactar, y Python para generar documentos. Las mediciones se tomaron del experimento registrado. La revisión y defensa corresponde al equipo.
 
 <!-- pagina -->
 

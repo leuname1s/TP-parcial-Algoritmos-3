@@ -2,7 +2,7 @@ package Interfaces;
 
 import Controladores.EstadoVistaJuego;
 
-/** Contrato de presentación para conectar Swing o una vista de prueba. */
+/** Contrato de presentación para conectar una vista al controlador. */
 public interface IVistaJuego {
     void actualizar(EstadoVistaJuego estado);
     void mostrarError(String mensaje);

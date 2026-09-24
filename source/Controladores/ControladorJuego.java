@@ -24,7 +24,7 @@ import javax.swing.Timer;
 
 /** Coordina presentación y persistencia; las reglas y las decisiones siguen en el motor. */
 public final class ControladorJuego {
-    /** Un solo aviso pendiente; permite verificar cancelaciones sin esperar tiempos reales. */
+    /** Un solo aviso pendiente para poder cancelar el turno programado. */
     public interface RelojTurnos {
         void programar(int demora, Runnable accion);
         void cancelar();
@@ -69,7 +69,7 @@ public final class ControladorJuego {
         this(partida, servicio, vista, new RelojSwing(), crearEjecutor(), SwingUtilities::invokeLater, true);
     }
 
-    /** Las pruebas controlan el reloj, las tareas de archivo y la entrega de sus resultados. */
+    /** Permite proporcionar el reloj, el ejecutor y el despacho hacia la vista. */
     public ControladorJuego(IPartida partida, ServicioEstadisticas servicio, IVistaJuego vista,
             RelojTurnos reloj, Executor trabajo, Consumer<Runnable> volverAlHiloVista) {
         this(partida, servicio, vista, reloj, trabajo, volverAlHiloVista, false);

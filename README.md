@@ -45,7 +45,6 @@ motor, pero no guarda automáticamente las estadísticas.
 |---|---|
 | `source/` | Motor, estrategias, datos, contratos, controlador y presentaciones Swing y consola. |
 | `resources/personajes/` | Los 36 sprites, asociados a los ID del catálogo. |
-| `tests/` | Pruebas de regresión del motor, estadísticas, controlador e interfaz. |
 | `experiments/` | Programa de comparación de MergeSort e Inserción. |
 | `docs/` | Informe técnico, UML, figuras y evidencia experimental. |
 
