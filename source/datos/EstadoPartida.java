@@ -1,0 +1,5 @@
+package datos;
+
+public enum EstadoPartida {
+    SIN_INICIAR, SELECCION_PERSONAJE, EN_CURSO, DECISION_SEGUNDA_FASE, FINALIZADA
+}
