@@ -32,13 +32,9 @@ Los paquetes `datos` y `defaults` contienen entidades y catálogo; `Funcionalida
 
 ![UML de clases de presentación y persistencia](figures/uml-aplicacion.png)
 
-**Figura 1.** Clases principales de presentación y persistencia, con miembros seleccionados. `+` indica público, `-` privado y `~` visibilidad de paquete. Línea continua con punta abierta: asociación navegable. Discontinua con punta abierta: dependencia. Discontinua con triángulo vacío: implementación de interfaz. Continua con triángulo vacío: herencia de clase.
+**Figura 1.** Presentación y persistencia. Los diagramas muestran una selección de clases y miembros; omiten componentes secundarios, sobrecargas y accesores. `+` indica público, `-` privado y `~` visibilidad de paquete. Línea continua con punta abierta: asociación navegable. Discontinua con punta abierta: dependencia. Discontinua con triángulo vacío: implementación de interfaz. Continua con triángulo vacío: herencia de clase. El rombo negro indica composición.
 
-`ControladorJuego` mantiene referencias a `IPartida`, `IVistaJuego` y `ServicioEstadisticas`. `VentanaPrincipal` implementa la vista y hereda de `JFrame`; conserva una referencia al controlador para entregar eventos. `EstadoVistaJuego` transporta la instantánea presentada. El servicio depende del contrato de repositorio, implementado por el archivo.
-
-`Main` construye y conecta los objetos. Los paneles de cartas, preguntas, secretos e historial se omiten para mantener la vista legible. La consola utiliza `PartidaConsola`, que reúne interacción y presentación sobre `IPartida`.
-
-El diagrama representa clases y relaciones, no un flujo de pantallas. Los archivos editables están en `docs/uml/`; el motor y sus estructuras se amplían en la figura siguiente.
+El controlador coordina el motor, la vista y la persistencia mediante sus contratos. `Main` construye y conecta los objetos. La consola utiliza `PartidaConsola` sobre el mismo motor.
 
 <!-- pagina -->
 
@@ -46,13 +42,9 @@ El diagrama representa clases y relaciones, no un flujo de pantallas. Los archiv
 
 ![UML de clases del dominio](figures/uml-motor.png)
 
-**Figura 2.** El motor, los contratos de máquina y las políticas. Los miembros mostrados son una selección de las declaraciones reales.
+**Figura 2.** Motor, contratos de máquina y políticas.
 
-`Partida` implementa `IPartida` y conserva referencias `IMaquina`. Ambas máquinas implementan ese contrato y delegan su política en `EstrategiaMaquina`. Cada una copia el tablero recibido y comparte el mazo. El motor crea un árbitro por turno para responder consultas sin entregar el secreto.
-
-`TableroCandidatos` implementa `ITableroCandidatos`. Se omiten sobrecargas, getters repetidos y enumeraciones auxiliares. `ResultadoTurno` y `DiagnosticoTurno` conservan la acción y su fundamento; `ResultadoPartida`, el desenlace definitivo.
-
-La **herencia de candidatos** entre fases es una copia del estado de descarte, no herencia de clases Java: `Maquina2` no extiende `Maquina1`.
+Cada máquina copia el tablero recibido y comparte el mazo. El motor crea un árbitro por turno para responder consultas sin entregar el secreto. La **herencia de candidatos** entre fases consiste en copiar los descartes: `Maquina2` no extiende `Maquina1`.
 
 <!-- pagina -->
 
@@ -60,11 +52,9 @@ La **herencia de candidatos** entre fases es una copia del estado de descarte, n
 
 ![UML del mazo y sus nodos](figures/uml-mazo.png)
 
-**Figura 3.** El rombo negro representa composición: el mazo administra sus nodos. Cada nodo referencia exactamente un personaje y cero o un siguiente. La relación con personaje no es composición porque los objetos se comparten entre catálogo, mazo y consultas.
+**Figura 3.** Mazo, nodos y personajes.
 
-`MazoPersonajes` implementa `IMazoPersonajes`, que extiende `Iterable<Personaje>`. `~` indica visibilidad de paquete: los nodos no son públicos. El mazo mantiene cabeza y cola y reordena enlaces, sin cambiar los personajes.
-
-El arreglo por ID y la lista son dos accesos a los mismos personajes. Cada tablero conserva una referencia al mazo y un arreglo independiente de marcas de candidatos. Por eso dos participantes pueden descartar de forma diferente sin cambiar el orden ni los atributos del mazo compartido.
+El mazo administra sus nodos mediante composición; los personajes se comparten entre catálogo, mazo y consultas. La lista y el índice por ID referencian los mismos personajes, mientras cada tablero mantiene sus propias marcas de descarte. El ordenamiento modifica los enlaces sin cambiar los personajes.
 
 <!-- pagina -->
 
@@ -105,11 +95,11 @@ Antes de preguntar, con más de un candidato, se sortea si arriesgar. La probabi
 
 El candidato se elige uniformemente entre los vivos. Con uno solo se intenta directamente; si no hay pregunta útil también se intenta. Preguntar consume el turno aunque deje un único candidato. La probabilidad de arriesgar no equivale a la probabilidad de acertar: modela el comportamiento de cada rival.
 
-## Límite global y contraejemplo
+### Límite global y contraejemplo
 
 El programa conserva los candidatos vivos y recalcula las preguntas posibles en cada turno; no construye un árbol completo. Como cada respuesta cambia qué atributos separan a los perfiles restantes, una buena partición local no garantiza el menor promedio total de preguntas.
 
-### Contraejemplo con personajes reales del catálogo
+#### Contraejemplo con personajes reales del catálogo
 
 Consideremos estos ocho perfiles como candidatos equiprobables y preguntemos hasta identificarlos, sin intentos anticipados ni rival. Es un ejemplo ilustrativo, no una partida observada ni una frecuencia empírica.
 
@@ -200,7 +190,7 @@ La idea de Strategy aparece en comportamientos intercambiables por contrato. La 
 
 ## 8 Notación Big O
 
-Sean n los personajes del mazo, c los del catálogo, m el mayor ID, p las preguntas, h las acciones del historial y r los registros persistidos. Hoy n = 23, c = 36 y p = 9. Las cotas expresan cómo crecerían las operaciones al variar esos tamaños.
+Sean n los personajes del mazo, c los del catálogo, m el mayor ID, p las preguntas, h las acciones del historial, r los registros persistidos y L la cantidad total de texto del registro. Hoy n = 23, c = 36 y p = 9. Las cotas expresan cómo crecerían las operaciones al variar esos tamaños.
 
 | Operación | Tiempo | Espacio adicional |
 |---|---|---|
@@ -217,14 +207,15 @@ Sean n los personajes del mazo, c los del catálogo, m el mayor ID, p las pregun
 | Preparar segunda fase completa | O(n + m) | O(n + m) |
 | Consultar candidatos como copia | O(n) | O(n) |
 | Construir instantánea de vista | O(n + p + h) | O(n + p + h) |
-| Reconstruir vista e historial | O(n + h·p) | Componentes e imágenes |
-| Cargar, consultar o guardar registro | O(r), con registros de tamaño acotado | O(r) |
+| Preparar datos de presentación y texto del historial | O(n + h·p) | O(n + h·p) |
+| Cargar, validar y consultar estadísticas | O(r + L) | O(r + L) |
+| Registrar una partida nueva y guardar el archivo completo | O(r log r + L) | O(r + L) |
 
-El enlace por cola es constante, pero `agregar` puede copiar el índice hasta ID + 1. Al construir el catálogo con ID consecutivos, las copias acumuladas llegan a O(c²). Por eso, toda la inicialización no cuesta solamente O(n log n): incluye construcción e índices. Con ID generalizados importa su magnitud m.
+El enlace por cola cuesta O(1), pero `agregar` puede ampliar el índice en O(m). Con ID consecutivos, esas ampliaciones acumulan O(c²) al construir el catálogo.
 
-No hay una única Big O para ordenamiento, interacción y persistencia. Para h acciones del motor, una cota simple es O(h·p·n), además de inicializar. Excluye tiempo humano, pausas deliberadas y dibujo de imágenes.
+Las consultas de estadísticas cargan y recorren el registro completo. Registrar una partida nueva reescribe el archivo; en el JDK 25 utilizado, `Properties.store` ordena las claves antes de escribirlas. Si los registros tienen longitud acotada, las cotas se simplifican a O(r) para consultar y O(r log r) para registrar. Los accesos mediante hash consideran su costo esperado.
 
-El motor devuelve un diagnóstico por turno; el controlador acumula O(h·p) de historial. Reconstruirlo después de cada acción puede acumular O(h·n + p·h²), aunque decidir siga costando O(p·n). No corresponde afirmar que todo el juego es O(log n) porque una pregunta ideal divida los candidatos por la mitad.
+Para h acciones del motor, una cota simple es O(h·p·n), además de la inicialización. Decidir un turno y preparar el historial son costos distintos: reconstruirlo después de cada acción puede acumular O(h·n + p·h²). La fila de presentación supone textos de longitud acotada y excluye el renderizado de imágenes y las pausas. No hay una única Big O para todo el juego, ni corresponde llamarlo O(log n) por una partición ideal de candidatos.
 
 <!-- pagina -->
 
@@ -276,27 +267,13 @@ La vista recibe copias inmutables y diagnósticos ya calculados, para mostrar el
 
 <!-- pagina -->
 
-## 11 Bitácora y verificación
+## 11 Verificación
 
-El detalle está en `docs/development-log.md`. El resumen conserva las fechas registradas sin inferir aportes individuales.
+La verificación registrada el 13/09/2026 completó la compilación compatible con Java 17, en UTF-8 y sin errores ni advertencias, y aprobó los 14 programas de regresión. La ejecución se realizó con JDK 25; no se comprobó en una JVM 17.
 
-| Fecha | Etapa y problema resuelto |
-|---|---|
-| 09/09/2026 | Cola y MergeSort estable; eliminación del doble ordenamiento y documentación en español. |
-| 10/09/2026 | Resultado y persistencia por UUID; prevención de duplicados y validación de archivo. |
-| 10/09/2026 | Motor por acciones separado de consola; validaciones previas y resultados estructurados. |
-| 12/09/2026 | Integración Swing, temporización y guardado; cancelación de eventos y respuestas tardías. |
-| 13/09/2026 | Miniatura rival, usuario recordado, marcador sin distinción de mayúsculas y verificación integral. |
-| 17/09/2026 | Comparación reproducible de MergeSort e Inserción. |
-| Edición del informe | UML de clases, ejemplos reales, conciliación documental y contraejemplo de Greedy. |
+Las pruebas cubrieron ordenamiento e identidad de personajes, estrategias y protección de secretos, validación de entradas, transiciones entre fases, resultados y persistencia. También comprobaron reintentos, prevención de duplicados, cancelación de turnos, respuestas tardías y flujos de Swing.
 
-La verificación del 13/09 documenta compilación con `javac --release 17 -encoding UTF-8 -Xlint:all`, sin errores ni advertencias, y 14 regresiones aprobadas. Incluye 100 partidas entre máquinas, 1.440 búsquedas y 22.000 tableros de decisión. Son evidencias de aquella ejecución, no nuevas pruebas ejecutadas al redactar.
-
-Se cubrieron ordenamiento estable e identidad, secretos, entradas inválidas sin consumo de turno, ambos órdenes de segunda fase y límites de 0/14/15/22 descartes. También resultados, persistencia, reintentos, deduplicación, cancelación de eventos, respuestas obsoletas, usuario y flujos Swing.
-
-Las capturas del anexo provienen de componentes reales de esa validación, con repositorios en memoria y archivos temporales. No representan una prueba manual prolongada. Se compiló para Java 17 y se ejecutó con JDK 25; no se registró ejecución en una JVM 17. El experimento del 17/09 tiene su propia verificación documentada.
-
-En esta edición se contrastan fragmentos con el código, tiempos con el CSV y UML con declaraciones y campos. No se modifican reglas, código de producción ni estadísticas locales.
+Las capturas históricas de la interfaz se conservan en `docs/figures/` y proceden de pruebas de componentes reales con datos controlados; no acreditan una prueba manual prolongada. El experimento del 17/09/2026 tiene su protocolo y verificación en `docs/experiments/README.md`. Estos resultados corresponden a las ejecuciones registradas, no a nuevas pruebas realizadas durante la edición del informe.
 
 <!-- pagina -->
 
@@ -319,14 +296,14 @@ Las mejoras posibles incluyen crecimiento más eficiente del índice, actualizac
 
 ### Bibliografía y fuentes
 
-1. López, Juan Ignacio. **Documentación para primer TP Programación III.pdf**, páginas 1 y 2. Consigna suministrada: UML, bitácora, algoritmos, complejidad y comparación experimental.
+1. López, Juan Ignacio. **Documentación para primer TP Programación III.pdf**, páginas 1 y 2. Consigna suministrada: UML, algoritmos, complejidad y comparación experimental.
 2. **Consigna original TP.docx** y **Borrador de diseño.docx**. Modalidades, atributos, riesgo, herencia de candidatos y resultados. Las pistas opcionales del borrador no se presentan como implementadas.
 3. **Código fuente del repositorio**, especialmente `MazoPersonajes`, `CatalogoPersonajes`, `EstrategiaMaquina`, `TableroCandidatos`, `Partida`, `ControladorJuego` y `ServicioEstadisticas`. Fuente de los fragmentos y relaciones.
-4. **README.md**, **docs/development-log.md**, **docs/experiments/README.md** y CSV del 17/09/2026. Instrucciones, decisiones, pruebas y mediciones.
+4. **README.md**, **docs/experiments/README.md** y CSV del 17/09/2026. Instrucciones, decisiones, pruebas y mediciones.
 
 ### Herramientas y asistencia
 
-Se utilizaron Java, Swing, Git, PowerShell y herramientas de edición y verificación. La bitácora registra asistencia de IA mediante Codex para implementar, probar y documentar. Esta edición también usó Codex para contrastar fuentes, preparar UML, verificar el contraejemplo y redactar, y Python para generar documentos. Las mediciones se tomaron del experimento registrado. La revisión y defensa corresponde al equipo.
+Se utilizaron Java, Swing, Git, PowerShell y herramientas de edición y verificación. Se utilizó asistencia de IA mediante Codex para implementar, probar y documentar el proyecto. Esta edición también usó Codex para contrastar fuentes, preparar UML, verificar el contraejemplo y redactar, y Python para generar documentos. Las mediciones se tomaron del experimento registrado. La revisión y defensa corresponde al equipo.
 
 <!-- pagina -->
 
@@ -341,15 +318,3 @@ Imágenes generadas a partir del código real, con archivo y líneas, como evide
 ![Código de Greedy](figures/codigo-greedy.png)
 
 **Figura 5.** Evaluación de preguntas y empates. Tiempo O(p·n), espacio O(p) para diagnóstico y empates.
-
-<!-- pagina -->
-
-## Anexo B Evidencia de la interfaz
-
-![Partida humana](figures/partida-humana.png)
-
-**Figura 6.** Validación del 13/09/2026: tablero humano, secreto propio, miniatura rival e historial.
-
-![Modo espectador](figures/espectador.png)
-
-**Figura 7.** Misma validación: dos tableros y razonamiento de máquinas. Son evidencias históricas, no capturas de una partida nueva de esta edición.

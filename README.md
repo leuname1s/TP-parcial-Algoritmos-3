@@ -47,7 +47,7 @@ motor, pero no guarda automáticamente las estadísticas.
 | `resources/personajes/` | Los 36 sprites, asociados a los ID del catálogo. |
 | `tests/` | Pruebas de regresión del motor, estadísticas, controlador e interfaz. |
 | `experiments/` | Programa de comparación de MergeSort e Inserción. |
-| `docs/` | Informe técnico, UML, figuras, bitácora y evidencia experimental. |
+| `docs/` | Informe técnico, UML, figuras y evidencia experimental. |
 
 Las reglas se concentran en el motor; el controlador coordina las acciones de
 Swing y las vistas presentan sus resultados. Las estadísticas se gestionan
@@ -55,15 +55,12 @@ mediante un servicio separado.
 
 ## Documentación
 
-- [Informe técnico](docs/technical-report.md): arquitectura, estructuras,
-  algoritmos, complejidades y verificación. También disponible en
-  [Word](docs/informe-tecnico.docx).
-- [Bitácora de desarrollo](docs/development-log.md): decisiones, etapas de
-  trabajo y verificaciones realizadas.
+- [Informe técnico](docs/informe-tecnico.md): arquitectura, estructuras,
+  algoritmos, complejidades y verificación.
 - [Comparación experimental](docs/experiments/README.md): protocolo y resultados
   de MergeSort frente a Inserción sobre los mismos 23 personajes.
-- [Diagramas UML](docs/uml/): fuentes editables de los diagramas incluidos
-  en el informe.
+- [Diagramas UML](docs/informe-tecnico.md#2-uml-de-clases-de-la-aplicación):
+  clases de la aplicación, el motor y el mazo.
 
 El informe técnico aún requiere completar los aportes individuales y la
 reflexión del equipo.
